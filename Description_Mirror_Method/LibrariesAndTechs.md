@@ -34,8 +34,6 @@ Database:
 Helpers:
 - Drei
 
-Storage:
-- Cloudinary or AWS S3
 
 ========================================================
 WHY SOLIDWORKS FILES CANNOT BE USED DIRECTLY
