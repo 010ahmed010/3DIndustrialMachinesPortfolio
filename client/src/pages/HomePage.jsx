@@ -1,7 +1,8 @@
-import React, { useEffect, useState, Suspense, Component } from 'react';
+import React, { useEffect, useState, Suspense, Component, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, useGLTF, Environment, ContactShadows, Grid } from '@react-three/drei';
+import * as THREE from 'three';
 import api from '../utils/api.js';
 import Navbar from '../components/Navbar.jsx';
 import Footer from '../components/Footer.jsx';
@@ -30,8 +31,39 @@ class CanvasErrorBoundary extends Component {
   }
 }
 
+/* Industrial steel color palette for drone parts */
+const STEEL_COLORS = ['#3a3f4a', '#4a515f', '#2e3340', '#525a6a', '#3d4455', '#606878'];
+let _meshIdx = 0;
+
 function DroneModel() {
   const { scene } = useGLTF(DRONE_URL);
+
+  useMemo(() => {
+    _meshIdx = 0;
+    scene.traverse((child) => {
+      if (child.isMesh) {
+        const orig = child.material?.color;
+        // Detect white default (from unloaded KHR_materials_pbrSpecularGlossiness)
+        const isWhite = !orig ||
+          (Math.abs(orig.r - 1) < 0.1 && Math.abs(orig.g - 1) < 0.1 && Math.abs(orig.b - 1) < 0.1);
+
+        const steelColor = isWhite
+          ? STEEL_COLORS[_meshIdx % STEEL_COLORS.length]
+          : orig;
+
+        child.material = new THREE.MeshStandardMaterial({
+          color: steelColor,
+          metalness: 0.8,
+          roughness: 0.2,
+          envMapIntensity: 2.0,
+        });
+        child.castShadow = true;
+        child.receiveShadow = true;
+        _meshIdx++;
+      }
+    });
+  }, [scene]);
+
   return <primitive object={scene} scale={1.4} position={[0, -0.5, 0]} />;
 }
 
@@ -43,14 +75,14 @@ function HeroCanvas() {
         gl={{ antialias: true, alpha: true }}
         style={{ background: 'transparent' }}
       >
-        <ambientLight intensity={0.6} />
-        <directionalLight position={[5, 8, 5]} intensity={1.2} castShadow />
-        <directionalLight position={[-5, 3, -5]} intensity={0.4} color="#4488ff" />
-        <pointLight position={[0, 5, 0]} intensity={0.5} color="#60a5fa" />
+        <ambientLight intensity={0.3} />
+        <directionalLight position={[5, 8, 5]} intensity={1.5} castShadow />
+        <directionalLight position={[-4, 2, -4]} intensity={0.6} color="#6ab0ff" />
+        <spotLight position={[0, 10, 0]} intensity={0.8} angle={0.4} penumbra={0.5} color="#ffffff" />
 
         <Suspense fallback={null}>
           <DroneModel />
-          <Environment preset="city" />
+          <Environment preset="warehouse" />
           <ContactShadows
             position={[0, -1.2, 0]}
             opacity={0.4}
@@ -132,45 +164,11 @@ export default function HomePage() {
           <div className="absolute left-1/4 top-1/4 w-96 h-96 bg-blue-600/8 rounded-full blur-3xl" />
         </div>
 
-        <div className="w-full flex flex-col lg:flex-row items-stretch min-h-screen">
+        {/* dir="ltr" so flex order is purely left→right; text content inside stays RTL */}
+        <div className="w-full flex flex-col lg:flex-row items-stretch min-h-screen" dir="ltr">
 
-          {/* ── 3D Canvas — left side (RTL order-1) ── */}
-          <div className="relative flex-1 lg:order-1 min-h-[55vh] lg:min-h-screen">
-            <div className="absolute inset-0">
-              <HeroCanvas />
-            </div>
-
-            {/* Control buttons — right edge of canvas */}
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col gap-2 z-10">
-              {[
-                { icon: 'fa-rotate', label: 'تدوير' },
-                { icon: 'fa-magnifying-glass-plus', label: 'تكبير' },
-                { icon: 'fa-up-down-left-right', label: 'تحريك' },
-                { icon: 'fa-expand', label: 'ملء' },
-              ].map((c, i) => (
-                <div key={i} className="w-12 h-12 bg-[#0f1520]/80 backdrop-blur border border-white/10 rounded-lg flex flex-col items-center justify-center gap-0.5 cursor-pointer hover:border-blue-500/60 transition-colors">
-                  <i className={`fa-solid ${c.icon} text-slate-400 text-xs`} />
-                  <span className="text-[9px] text-slate-500">{c.label}</span>
-                </div>
-              ))}
-            </div>
-
-            {/* Drag hint */}
-            <div className="absolute bottom-6 left-6 flex items-center gap-2 text-slate-500 text-xs z-10">
-              <i className="fa-solid fa-hand-pointer text-slate-600" />
-              <span>اسحب للتدوير</span>
-            </div>
-
-            {/* Slide dots */}
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
-              {[0,1,2,3].map(i => (
-                <div key={i} className={`rounded-full transition-all ${i===0 ? 'w-5 h-2 bg-blue-500' : 'w-2 h-2 bg-slate-600'}`} />
-              ))}
-            </div>
-          </div>
-
-          {/* ── Text — right side (RTL order-2) ── */}
-          <div className="flex-1 lg:order-2 flex items-center z-10 px-8 lg:px-16 py-24 lg:py-0">
+          {/* ── Text — LEFT side ── */}
+          <div className="flex-1 flex items-center z-10 px-8 lg:px-16 py-24 lg:py-0" dir="rtl">
             <div className="max-w-xl w-full">
               <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/30 rounded-full px-4 py-1.5 text-sm text-blue-400 mb-6">
                 <i className="fa-solid fa-circle-dot text-xs animate-pulse" />
@@ -218,6 +216,42 @@ export default function HomePage() {
               </div>
             </div>
           </div>
+
+          {/* ── 3D Canvas — RIGHT side ── */}
+          <div className="relative flex-1 min-h-[55vh] lg:min-h-screen">
+            <div className="absolute inset-0">
+              <HeroCanvas />
+            </div>
+
+            {/* Control buttons — left edge of canvas (inner right in LTR) */}
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 flex flex-col gap-2 z-10">
+              {[
+                { icon: 'fa-rotate', label: 'تدوير' },
+                { icon: 'fa-magnifying-glass-plus', label: 'تكبير' },
+                { icon: 'fa-up-down-left-right', label: 'تحريك' },
+                { icon: 'fa-expand', label: 'ملء' },
+              ].map((c, i) => (
+                <div key={i} className="w-12 h-12 bg-[#0f1520]/80 backdrop-blur border border-white/10 rounded-lg flex flex-col items-center justify-center gap-0.5 cursor-pointer hover:border-blue-500/60 transition-colors" dir="rtl">
+                  <i className={`fa-solid ${c.icon} text-slate-400 text-xs`} />
+                  <span className="text-[9px] text-slate-500">{c.label}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Drag to rotate hint */}
+            <div className="absolute bottom-6 right-6 flex items-center gap-2 text-slate-500 text-xs z-10" dir="rtl">
+              <i className="fa-solid fa-hand-pointer text-slate-600" />
+              <span>اسحب للتدوير</span>
+            </div>
+
+            {/* Slide dots */}
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+              {[0,1,2,3].map(i => (
+                <div key={i} className={`rounded-full transition-all ${i===0 ? 'w-5 h-2 bg-blue-500' : 'w-2 h-2 bg-slate-600'}`} />
+              ))}
+            </div>
+          </div>
+
         </div>
       </section>
 
