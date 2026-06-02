@@ -1,0 +1,10 @@
+node_modules/
+server/node_modules/
+client/node_modules/
+server/.env
+uploads/models/*
+uploads/sketches/*
+!uploads/models/.gitkeep
+!uploads/sketches/.gitkeep
+dist/
+.DS_Store
