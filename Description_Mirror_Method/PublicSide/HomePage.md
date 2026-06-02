@@ -2,7 +2,7 @@
 
 # Home Page
 
-The image in the InspirationAssets directory (homePage.png) defines the exact design, layout, spacing, typography, colors, and component placement for the Home Page.
+The image in the InspirationAssets directory (`homePage.png`) defines the exact design, layout, spacing, typography, colors, and component placement for the Home Page.
 
 Mandatory instructions for implementation:
 
@@ -22,14 +22,15 @@ Bio details (set exactly):
 
 3D and interaction UX requirements:
 
-- Project cards must include a clear CTA in Arabic: "عرض المشروع ثلاثي الأبعاد" which opens the 3D viewer modal or navigates to the project page.
+- Project cards must include a clear CTA in Arabic: "عرض المشروع ثلاثي الأبعاد" which opens the 3D viewer modal or navigates to [the project viewer page](./3DProjectViewerSubpage.md).
 - The 3D viewer must match the visual placement and sizing from the image and support orbit, zoom, and fullscreen.
 
 Development notes for agents and implementers:
 
-- Follow the project's Constraints and DMM files. Implement the frontend under the `client` directory and reuse components under `components`.
-- Exact replication is required: when the image shows a spacing, color, or typography decision, reproduce it in CSS/Tailwind. Any added sections or extras must visually match the image's style and alignment.
+- Follow the project's [Constraints](../Constraints.md) and DMM files. Implement the frontend under the `client` directory and reuse components under `components`.
+- Exact replication is required: when the image shows a spacing, color, or typography decision, reproduce it in Tailwind. Any added sections or extras must visually match the image's style and alignment.
 - If any deviation from the image is necessary (technical or accessibility reasons), document the deviation with rationale and provide screenshots of the proposed change for approval.
 
 All content and additional details are stored in the DMM files; use them as source of truth when building the Home Page.
 
+ 
