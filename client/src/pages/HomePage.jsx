@@ -29,6 +29,23 @@ if (typeof window !== 'undefined') {
   HERO_MODELS.forEach(m => useGLTF.preload(m.url));
 }
 
+/* Pick a model that is DIFFERENT from the last visit, cycling through all 4.
+   Runs at module-evaluation time so it re-runs on every hard page reload.     */
+function pickHeroModel() {
+  try {
+    const key = 'hero_model_idx';
+    const last = parseInt(localStorage.getItem(key) ?? '-1');
+    const next = (isNaN(last) ? -1 : last) + 1;
+    const idx  = next % HERO_MODELS.length;
+    localStorage.setItem(key, String(idx));
+    return HERO_MODELS[idx];
+  } catch {
+    return HERO_MODELS[0];
+  }
+}
+
+const HERO_MODEL_THIS_VISIT = pickHeroModel();
+
 /* Steel fallback palette — used only when a mesh has NO textures and is white */
 const STEEL_COLORS = ['#3a3f4a', '#4a515f', '#2e3340', '#525a6a', '#3d4455', '#606878'];
 
@@ -157,10 +174,8 @@ export default function HomePage() {
   const [contact, setContact] = useState({ name: '', email: '', subject: '', message: '' });
   const [contactStatus, setContactStatus] = useState(null);
 
-  /* Pick one random model per page load — useState lazy-init is stable across re-renders */
-  const [heroModel] = useState(
-    () => HERO_MODELS[Math.floor(Math.random() * HERO_MODELS.length)]
-  );
+  /* Use the model selected at module-evaluation time (changes on every page load) */
+  const heroModel = HERO_MODEL_THIS_VISIT;
 
   useEffect(() => {
     api.get('/modules?limit=6&status=published').then(r => setModules(r.data.modules || []));
