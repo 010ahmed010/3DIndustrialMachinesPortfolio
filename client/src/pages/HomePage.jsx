@@ -15,13 +15,13 @@ import ProjectCard from '../components/ProjectCard.jsx';
    ─────────────────────────────────────────────────────────────────────────── */
 const HERO_MODELS = [
   // mech_drone  — original hero model
-  { url: '/models/mech_drone/scene.gltf',         scale: 2.2,  posY: -0.2 },
+  { url: '/models/mech_drone/scene.gltf',         scale: 2.2,  posY: 0.15 },
   // deadnaut    — tall armoured robot
   { url: '/models/deadnaut/scene.gltf',           scale: 0.38, posY: -0.9 },
   // drone       — wide quad-drone
   { url: '/models/drone/scene.gltf',              scale: 0.7,  posY: -0.3 },
   // toon_drone  — "4m" model is huge in world units; scale way down so full drone fits
-  { url: '/models/toon_drone_-_4m-ru/scene.gltf', scale: 0.055, posY: 0.1 },
+  { url: '/models/toon_drone_-_4m-ru/scene.gltf', scale: 0.055, posY: -0.05 },
 ];
 
 /* Preload triggered once at module init — useGLTF.preload is a static util, not a hook */
