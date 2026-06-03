@@ -1,7 +1,7 @@
 import React, { useEffect, useState, Suspense, Component, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, useGLTF, Environment, ContactShadows, Grid } from '@react-three/drei';
+import { OrbitControls, useGLTF, Environment, ContactShadows, Grid, useProgress } from '@react-three/drei';
 import * as THREE from 'three';
 import api from '../utils/api.js';
 import Navbar from '../components/Navbar.jsx';
@@ -18,8 +18,8 @@ const HERO_MODELS = [
   { url: '/models/mech_drone/scene.gltf',                              scale: 2.2,  posY: -0.6 },
   // deadnaut    — tall robot; scale down so antenna and feet stay inside frame
   { url: '/models/deadnaut/scene.gltf',                                scale: 0.38, posY: -0.9 },
-  // drone       — wide quad-drone; scale down so propellers stay inside frame
-  { url: '/models/drone/scene.gltf',                                   scale: 1.3,  posY: -0.5 },
+  // drone       — wide quad-drone; scaled down so propellers stay well inside frame
+  { url: '/models/drone/scene.gltf',                                   scale: 0.7,  posY: -0.3 },
   // dodge challenger — low, wide car; small scale + low Y keeps the full body in frame
   { url: '/models/dodge_challenger_srt_hellcat_redeye__free/scene.gltf', scale: 0.45, posY: -0.25 },
 ];
@@ -48,6 +48,33 @@ const HERO_MODEL_THIS_VISIT = pickHeroModel();
 
 /* Steel fallback palette — used only when a mesh has NO textures and is white */
 const STEEL_COLORS = ['#3a3f4a', '#4a515f', '#2e3340', '#525a6a', '#3d4455', '#606878'];
+
+/* ── Loading progress overlay — shown while the GLTF model is fetching ── */
+function ModelLoadingOverlay() {
+  const { progress, active } = useProgress();
+  if (!active) return null;
+  return (
+    <div className="absolute inset-0 flex flex-col items-center justify-center z-20 pointer-events-none">
+      <div className="flex flex-col items-center gap-4">
+        {/* Spinning cube icon */}
+        <div className="w-14 h-14 bg-blue-500/15 border border-blue-500/30 rounded-2xl flex items-center justify-center animate-pulse">
+          <i className="fa-solid fa-cube text-blue-400 text-2xl" />
+        </div>
+        {/* Progress bar */}
+        <div className="w-40 h-1.5 bg-slate-700/60 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-blue-500 rounded-full transition-all duration-300"
+            style={{ width: `${Math.round(progress)}%` }}
+          />
+        </div>
+        {/* Percentage */}
+        <span className="text-slate-400 text-xs font-medium tabular-nums">
+          {Math.round(progress)}%
+        </span>
+      </div>
+    </div>
+  );
+}
 
 /* ── Error boundary so WebGL failures don't crash the whole page ── */
 class CanvasErrorBoundary extends Component {
@@ -117,7 +144,9 @@ function HeroModel({ url, scale, posY }) {
 /* ── Hero 3-D canvas ── */
 function HeroCanvas({ model }) {
   return (
-    <CanvasErrorBoundary>
+    <>
+      <ModelLoadingOverlay />
+      <CanvasErrorBoundary>
       <Canvas
         camera={{ position: [0, 1.2, 3.5], fov: 38 }}
         gl={{ antialias: true, alpha: true }}
@@ -164,7 +193,8 @@ function HeroCanvas({ model }) {
           maxPolarAngle={Math.PI / 2}
         />
       </Canvas>
-    </CanvasErrorBoundary>
+      </CanvasErrorBoundary>
+    </>
   );
 }
 
