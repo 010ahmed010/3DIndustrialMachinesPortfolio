@@ -8,7 +8,25 @@ import Navbar from '../components/Navbar.jsx';
 import Footer from '../components/Footer.jsx';
 import ProjectCard from '../components/ProjectCard.jsx';
 
-const DRONE_URL = '/models/mech_drone.glb';
+/* ─── Hero model catalogue ───────────────────────────────────────────────────
+   Each model lives in public/models/<name>/scene.gltf with its textures folder.
+   scale  — world-unit scale so the model fills the viewport nicely.
+   posY   — vertical offset to sit just above the contact-shadow plane.
+   ─────────────────────────────────────────────────────────────────────────── */
+const HERO_MODELS = [
+  { url: '/models/mech_drone/scene.gltf',           scale: 2.2,  posY: -0.6 },
+  { url: '/models/deadnaut/scene.gltf',             scale: 1.4,  posY: -0.8 },
+  { url: '/models/3d_printer/scene.gltf',           scale: 1.8,  posY: -0.7 },
+  { url: '/models/free_cyberpunk_hovercar/scene.gltf', scale: 0.6, posY: -0.4 },
+];
+
+/* Preload triggered once at module init — useGLTF.preload is a static util, not a hook */
+if (typeof window !== 'undefined') {
+  HERO_MODELS.forEach(m => useGLTF.preload(m.url));
+}
+
+/* Steel fallback palette — used only when a mesh has NO textures and is white */
+const STEEL_COLORS = ['#3a3f4a', '#4a515f', '#2e3340', '#525a6a', '#3d4455', '#606878'];
 
 /* ── Error boundary so WebGL failures don't crash the whole page ── */
 class CanvasErrorBoundary extends Component {
@@ -31,69 +49,78 @@ class CanvasErrorBoundary extends Component {
   }
 }
 
-/* Industrial steel color palette for drone parts */
-const STEEL_COLORS = ['#3a3f4a', '#4a515f', '#2e3340', '#525a6a', '#3d4455', '#606878'];
-let _meshIdx = 0;
-
-function DroneModel() {
-  const { scene } = useGLTF(DRONE_URL);
+/* ── Single GLTF model renderer ──
+   Preserves real textures from the GLTF.  Only applies the steel fallback
+   to meshes that have NO texture maps and a white/grey default colour.       */
+function HeroModel({ url, scale, posY }) {
+  const { scene } = useGLTF(url);
 
   useMemo(() => {
-    _meshIdx = 0;
+    let idx = 0;
     scene.traverse((child) => {
-      if (child.isMesh) {
-        const orig = child.material?.color;
-        // Detect white default (from unloaded KHR_materials_pbrSpecularGlossiness)
-        const isWhite = !orig ||
-          (Math.abs(orig.r - 1) < 0.1 && Math.abs(orig.g - 1) < 0.1 && Math.abs(orig.b - 1) < 0.1);
+      if (!child.isMesh) return;
 
-        const steelColor = isWhite
-          ? STEEL_COLORS[_meshIdx % STEEL_COLORS.length]
-          : orig;
+      const mat = child.material;
+      const hasTexture =
+        mat?.map || mat?.normalMap || mat?.emissiveMap ||
+        mat?.metalnessMap || mat?.roughnessMap || mat?.aoMap ||
+        mat?.specularMap;
 
-        child.material = new THREE.MeshStandardMaterial({
-          color: steelColor,
-          metalness: 0.8,
-          roughness: 0.2,
-          envMapIntensity: 2.0,
-        });
-        child.castShadow = true;
-        child.receiveShadow = true;
-        _meshIdx++;
+      if (!hasTexture) {
+        const c = mat?.color;
+        const isWhite =
+          !c ||
+          (Math.abs(c.r - 1) < 0.15 &&
+           Math.abs(c.g - 1) < 0.15 &&
+           Math.abs(c.b - 1) < 0.15);
+
+        if (isWhite) {
+          child.material = new THREE.MeshStandardMaterial({
+            color: STEEL_COLORS[idx % STEEL_COLORS.length],
+            metalness: 0.8,
+            roughness: 0.2,
+            envMapIntensity: 1.5,
+          });
+          idx++;
+        }
       }
+
+      child.castShadow    = true;
+      child.receiveShadow = true;
     });
   }, [scene]);
 
-  return <primitive object={scene} scale={1.4} position={[0, -0.5, 0]} />;
+  return <primitive object={scene} scale={scale} position={[0, posY, 0]} />;
 }
 
-function HeroCanvas() {
+/* ── Hero 3-D canvas ── */
+function HeroCanvas({ model }) {
   return (
     <CanvasErrorBoundary>
       <Canvas
-        camera={{ position: [3, 2, 5], fov: 45 }}
+        camera={{ position: [0, 1.2, 3.5], fov: 38 }}
         gl={{ antialias: true, alpha: true }}
         style={{ background: 'transparent' }}
       >
-        <ambientLight intensity={0.3} />
-        <directionalLight position={[5, 8, 5]} intensity={1.5} castShadow />
+        <ambientLight intensity={0.4} />
+        <directionalLight position={[5, 8, 5]}   intensity={1.5} castShadow />
         <directionalLight position={[-4, 2, -4]} intensity={0.6} color="#6ab0ff" />
-        <spotLight position={[0, 10, 0]} intensity={0.8} angle={0.4} penumbra={0.5} color="#ffffff" />
+        <spotLight position={[0, 10, 0]} intensity={0.8} angle={0.4} penumbra={0.5} />
 
         <Suspense fallback={null}>
-          <DroneModel />
+          <HeroModel url={model.url} scale={model.scale} posY={model.posY} />
           <Environment preset="warehouse" />
           <ContactShadows
-            position={[0, -1.2, 0]}
-            opacity={0.4}
-            scale={8}
-            blur={2}
+            position={[0, -1.0, 0]}
+            opacity={0.45}
+            scale={10}
+            blur={2.5}
             far={4}
           />
         </Suspense>
 
         <Grid
-          position={[0, -1.22, 0]}
+          position={[0, -1.02, 0]}
           args={[20, 20]}
           cellSize={0.6}
           cellThickness={0.5}
@@ -111,8 +138,8 @@ function HeroCanvas() {
           autoRotate
           autoRotateSpeed={1.2}
           enablePan={false}
-          minDistance={3}
-          maxDistance={10}
+          minDistance={1.8}
+          maxDistance={8}
           maxPolarAngle={Math.PI / 2}
         />
       </Canvas>
@@ -125,6 +152,11 @@ export default function HomePage() {
   const [profile, setProfile] = useState(null);
   const [contact, setContact] = useState({ name: '', email: '', subject: '', message: '' });
   const [contactStatus, setContactStatus] = useState(null);
+
+  /* Pick one random model per page load — useState lazy-init is stable across re-renders */
+  const [heroModel] = useState(
+    () => HERO_MODELS[Math.floor(Math.random() * HERO_MODELS.length)]
+  );
 
   useEffect(() => {
     api.get('/modules?limit=6&status=published').then(r => setModules(r.data.modules || []));
@@ -172,7 +204,7 @@ export default function HomePage() {
           {/* ── 3D Canvas — LEFT on desktop / TOP on mobile ── */}
           <div className="relative flex-1 min-h-[60vh] lg:min-h-screen">
             <div className="absolute inset-0">
-              <HeroCanvas />
+              <HeroCanvas model={heroModel} />
             </div>
 
             {/* Control buttons — left edge */}
