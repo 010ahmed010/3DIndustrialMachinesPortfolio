@@ -30,6 +30,9 @@ export default function Navbar() {
     { href: '#contact',  label: 'التواصل',    icon: 'fa-envelope' },
   ];
 
+  // Only الرئيسية appears in التنقل; the rest are covered by the sections grid
+  const topLinks = links.filter(l => l.href === '#home');
+
   const sections = [
     { href: '#projects', label: 'المشاريع',   icon: 'fa-cube' },
     { href: '#about',    label: 'عن المهندس', icon: 'fa-user-gear' },
@@ -83,24 +86,22 @@ export default function Navbar() {
         style={{ background: '#0b0f1a' }}
         dir="rtl"
       >
-        {/* Top bar */}
+        {/* Top bar — Logo right, X left (RTL: first child = right, second = left) */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
-          {/* Close button — left in LTR / right visually in RTL layout → we use dir=ltr on row */}
-          <div className="flex items-center gap-3" dir="ltr">
-            <button
-              onClick={close}
-              className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-300 hover:text-white hover:bg-white/10 transition-all"
-            >
-              <i className="fa-solid fa-xmark text-lg" />
-            </button>
-          </div>
-          {/* Logo */}
+          {/* Logo — first child → RIGHT in RTL */}
           <Link to="/" onClick={close} className="flex items-center gap-2">
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
               <i className="fa-solid fa-cube text-white text-sm" />
             </div>
             <span className="font-bold text-base">ميك بورتفوليو</span>
           </Link>
+          {/* Close button — second child → LEFT in RTL */}
+          <button
+            onClick={close}
+            className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-300 hover:text-white hover:bg-white/10 transition-all"
+          >
+            <i className="fa-solid fa-xmark text-lg" />
+          </button>
         </div>
 
         {/* Scrollable body */}
@@ -110,15 +111,17 @@ export default function Navbar() {
           <div>
             <p className="text-slate-600 text-xs font-medium mb-4 text-right">التنقل</p>
             <div className="space-y-1">
-              {links.map(l => (
+              {topLinks.map(l => (
                 <a
                   key={l.href}
                   href={l.href}
                   onClick={close}
                   className="flex items-center justify-between w-full py-3 px-2 text-slate-200 hover:text-white rounded-xl hover:bg-white/5 transition-all group"
                 >
-                  <i className={`fa-solid ${l.icon} text-slate-600 group-hover:text-blue-400 text-sm transition-colors`} />
+                  {/* text first → RIGHT in RTL */}
                   <span className="text-xl font-semibold">{l.label}</span>
+                  {/* icon second → LEFT in RTL */}
+                  <i className={`fa-solid ${l.icon} text-slate-600 group-hover:text-blue-400 text-sm transition-colors`} />
                 </a>
               ))}
             </div>
