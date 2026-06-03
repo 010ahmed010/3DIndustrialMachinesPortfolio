@@ -14,10 +14,14 @@ import ProjectCard from '../components/ProjectCard.jsx';
    posY   — vertical offset to sit just above the contact-shadow plane.
    ─────────────────────────────────────────────────────────────────────────── */
 const HERO_MODELS = [
-  { url: '/models/mech_drone/scene.gltf',           scale: 2.2,  posY: -0.6 },
-  { url: '/models/deadnaut/scene.gltf',             scale: 1.4,  posY: -0.8 },
-  { url: '/models/3d_printer/scene.gltf',           scale: 1.8,  posY: -0.7 },
-  { url: '/models/free_cyberpunk_hovercar/scene.gltf', scale: 0.6, posY: -0.4 },
+  // mech_drone  — confirmed good on all screens, keep as-is
+  { url: '/models/mech_drone/scene.gltf',                              scale: 2.2,  posY: -0.6 },
+  // deadnaut    — robot is tall/wide; reduced from 1.4 → 0.55 so it fits inside the half-panel
+  { url: '/models/deadnaut/scene.gltf',                                scale: 0.55, posY: -0.9 },
+  // drone       — compact quad-drone; moderate scale fills the viewer without overflow
+  { url: '/models/drone/scene.gltf',                                   scale: 2.0,  posY: -0.5 },
+  // dodge challenger — low, wide car; small scale + low Y keeps the full body in frame
+  { url: '/models/dodge_challenger_srt_hellcat_redeye__free/scene.gltf', scale: 0.45, posY: -0.25 },
 ];
 
 /* Preload triggered once at module init — useGLTF.preload is a static util, not a hook */
