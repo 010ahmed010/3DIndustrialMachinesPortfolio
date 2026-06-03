@@ -20,8 +20,8 @@ const HERO_MODELS = [
   { url: '/models/deadnaut/scene.gltf',           scale: 0.38, posY: -0.9 },
   // drone       — wide quad-drone
   { url: '/models/drone/scene.gltf',              scale: 0.7,  posY: -0.3 },
-  // toon_drone  — stylised toon quad-drone; scale down to fit all screens
-  { url: '/models/toon_drone_-_4m-ru/scene.gltf', scale: 0.9,  posY: -0.5 },
+  // toon_drone  — stylised toon quad-drone; small scale so full body fits all screens
+  { url: '/models/toon_drone_-_4m-ru/scene.gltf', scale: 0.35, posY: -0.3 },
 ];
 
 /* Preload triggered once at module init — useGLTF.preload is a static util, not a hook */
