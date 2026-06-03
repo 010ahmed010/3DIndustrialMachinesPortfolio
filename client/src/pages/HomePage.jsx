@@ -164,74 +164,27 @@ export default function HomePage() {
           <div className="absolute left-1/4 top-1/4 w-96 h-96 bg-blue-600/8 rounded-full blur-3xl" />
         </div>
 
-        {/* dir="ltr" so flex order is purely left→right; text content inside stays RTL */}
+        {/* dir="ltr" → explicit left-to-right positions regardless of page RTL.
+            DOM order: Canvas first = LEFT on desktop / TOP on mobile
+                       Text second  = RIGHT on desktop / BOTTOM on mobile          */}
         <div className="w-full flex flex-col lg:flex-row items-stretch min-h-screen" dir="ltr">
 
-          {/* ── Text — LEFT side ── */}
-          <div className="flex-1 flex items-center z-10 px-8 lg:px-16 py-24 lg:py-0" dir="rtl">
-            <div className="max-w-xl w-full">
-              <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/30 rounded-full px-4 py-1.5 text-sm text-blue-400 mb-6">
-                <i className="fa-solid fa-circle-dot text-xs animate-pulse" />
-                <span>اعرض. شارك. ألهم.</span>
-              </div>
-
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight mb-6">
-                اعرض هندستك{' '}
-                <span className="text-blue-400">بتقنية ثلاثية الأبعاد.</span>
-              </h1>
-
-              <p className="text-slate-400 text-lg mb-8 leading-relaxed">
-                {profile?.bioAr || 'منصة متخصصة لمهندسي SolidWorks لعرض مشاريعهم بنماذج ثلاثية الأبعاد تفاعلية ودراسات حالة تفصيلية.'}
-              </p>
-
-              <div className="flex flex-wrap gap-4 mb-12">
-                <a href="#projects" className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors shadow-lg shadow-blue-600/20">
-                  <span>استعراض المشاريع</span>
-                  <i className="fa-solid fa-arrow-left" />
-                </a>
-                <a href="#contact" className="flex items-center gap-2 border border-slate-600 hover:border-blue-500 text-slate-300 hover:text-white px-6 py-3 rounded-lg font-semibold transition-colors">
-                  <span>التواصل</span>
-                  <i className="fa-solid fa-envelope" />
-                </a>
-              </div>
-
-              {/* Stats */}
-              <div className="flex flex-wrap gap-6 pt-6 border-t border-white/5">
-                {[
-                  { icon: 'fa-cube',     value: `+${modules.length || '0'}`, label: 'مشروع' },
-                  { icon: 'fa-user-gear',value: '1',       label: 'مهندس' },
-                  { icon: 'fa-eye',      value: '+2,450',  label: 'مشاهدة' },
-                  { icon: 'fa-heart',    value: '+1,200',  label: 'إعجاب' },
-                ].map((s, i) => (
-                  <div key={i} className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
-                      <i className={`fa-solid ${s.icon} text-blue-400 text-sm`} />
-                    </div>
-                    <div>
-                      <div className="text-lg font-bold leading-tight">{s.value}</div>
-                      <div className="text-slate-500 text-xs">{s.label}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* ── 3D Canvas — RIGHT side ── */}
-          <div className="relative flex-1 min-h-[55vh] lg:min-h-screen">
+          {/* ── 3D Canvas — LEFT on desktop / TOP on mobile ── */}
+          <div className="relative flex-1 min-h-[60vh] lg:min-h-screen">
             <div className="absolute inset-0">
               <HeroCanvas />
             </div>
 
-            {/* Control buttons — left edge of canvas (inner right in LTR) */}
+            {/* Control buttons — left edge */}
             <div className="absolute left-4 top-1/2 -translate-y-1/2 flex flex-col gap-2 z-10">
               {[
-                { icon: 'fa-rotate', label: 'تدوير' },
+                { icon: 'fa-rotate',               label: 'تدوير' },
                 { icon: 'fa-magnifying-glass-plus', label: 'تكبير' },
-                { icon: 'fa-up-down-left-right', label: 'تحريك' },
-                { icon: 'fa-expand', label: 'ملء' },
+                { icon: 'fa-up-down-left-right',    label: 'تحريك' },
+                { icon: 'fa-expand',               label: 'ملء' },
               ].map((c, i) => (
-                <div key={i} className="w-12 h-12 bg-[#0f1520]/80 backdrop-blur border border-white/10 rounded-lg flex flex-col items-center justify-center gap-0.5 cursor-pointer hover:border-blue-500/60 transition-colors" dir="rtl">
+                <div key={i} dir="rtl"
+                  className="w-12 h-12 bg-[#0f1520]/80 backdrop-blur border border-white/10 rounded-lg flex flex-col items-center justify-center gap-0.5 cursor-pointer hover:border-blue-500/60 transition-colors">
                   <i className={`fa-solid ${c.icon} text-slate-400 text-xs`} />
                   <span className="text-[9px] text-slate-500">{c.label}</span>
                 </div>
@@ -249,6 +202,58 @@ export default function HomePage() {
               {[0,1,2,3].map(i => (
                 <div key={i} className={`rounded-full transition-all ${i===0 ? 'w-5 h-2 bg-blue-500' : 'w-2 h-2 bg-slate-600'}`} />
               ))}
+            </div>
+          </div>
+
+          {/* ── Text — RIGHT on desktop / BOTTOM on mobile ── */}
+          <div className="flex-1 flex items-center z-10 px-8 lg:px-16 py-16 lg:py-0" dir="rtl">
+            <div className="max-w-xl w-full">
+              <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/30 rounded-full px-4 py-1.5 text-sm text-blue-400 mb-6">
+                <i className="fa-solid fa-circle-dot text-xs animate-pulse" />
+                <span>اعرض. شارك. ألهم.</span>
+              </div>
+
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight mb-6">
+                اعرض هندستك{' '}
+                <span className="text-blue-400">بتقنية ثلاثية الأبعاد.</span>
+              </h1>
+
+              <p className="text-slate-400 text-lg mb-8 leading-relaxed">
+                {profile?.bioAr || 'منصة متخصصة لمهندسي SolidWorks لعرض مشاريعهم بنماذج ثلاثية الأبعاد تفاعلية ودراسات حالة تفصيلية.'}
+              </p>
+
+              <div className="flex flex-wrap gap-4 mb-12">
+                <a href="#projects"
+                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors shadow-lg shadow-blue-600/20">
+                  <span>استعراض المشاريع</span>
+                  <i className="fa-solid fa-arrow-left" />
+                </a>
+                <a href="#contact"
+                  className="flex items-center gap-2 border border-slate-600 hover:border-blue-500 text-slate-300 hover:text-white px-6 py-3 rounded-lg font-semibold transition-colors">
+                  <span>التواصل</span>
+                  <i className="fa-solid fa-envelope" />
+                </a>
+              </div>
+
+              {/* Stats */}
+              <div className="flex flex-wrap gap-6 pt-6 border-t border-white/5">
+                {[
+                  { icon: 'fa-cube',      value: `+${modules.length || '0'}`, label: 'مشروع' },
+                  { icon: 'fa-user-gear', value: '1',      label: 'مهندس' },
+                  { icon: 'fa-eye',       value: '+2,450', label: 'مشاهدة' },
+                  { icon: 'fa-heart',     value: '+1,200', label: 'إعجاب' },
+                ].map((s, i) => (
+                  <div key={i} className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+                      <i className={`fa-solid ${s.icon} text-blue-400 text-sm`} />
+                    </div>
+                    <div>
+                      <div className="text-lg font-bold leading-tight">{s.value}</div>
+                      <div className="text-slate-500 text-xs">{s.label}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
