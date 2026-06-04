@@ -5,6 +5,7 @@ import logo from '../../assets/logo/3DIndustrialPortfolio.png';
 
 export default function AdminLoginPage() {
   const [form, setForm] = useState({ username: '', password: '' });
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
@@ -57,14 +58,22 @@ export default function AdminLoginPage() {
               <div className="relative">
                 <i className="fa-solid fa-lock absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm" />
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   value={form.password}
                   onChange={e => setForm(p => ({...p, password: e.target.value}))}
                   required
-                  className="w-full bg-[#0f1117] border border-white/10 rounded-lg pr-10 pl-4 py-3 text-white text-right focus:outline-none focus:border-blue-500 transition-colors"
+                  className="w-full bg-[#0f1117] border border-white/10 rounded-lg pr-10 pl-10 py-3 text-white text-right focus:outline-none focus:border-blue-500 transition-colors"
                   placeholder="كلمة المرور"
                   dir="rtl"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(p => !p)}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                  tabIndex={-1}
+                >
+                  <i className={`fa-solid ${showPassword ? 'fa-eye-slash' : 'fa-eye'} text-sm`} />
+                </button>
               </div>
             </div>
 
