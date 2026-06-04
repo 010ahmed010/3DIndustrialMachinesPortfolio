@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import logo from '../assets/logo/3DIndustrialPortfolio.png';
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -47,9 +48,7 @@ export default function Navbar() {
       <nav className={`fixed top-0 right-0 left-0 z-50 transition-all duration-300 ${scrolled ? 'bg-[#0a0a0f]/95 backdrop-blur-md border-b border-white/5 shadow-xl' : 'bg-transparent'}`}>
         <div className="container mx-auto px-6 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <i className="fa-solid fa-cube text-white text-sm" />
-            </div>
+            <img src={logo} alt="logo" className="w-8 h-8 rounded-lg object-contain" />
             <span className="font-bold text-lg">ميك بورتفوليو</span>
           </Link>
 
@@ -90,9 +89,7 @@ export default function Navbar() {
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
           {/* Logo — first child → RIGHT in RTL */}
           <Link to="/" onClick={close} className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <i className="fa-solid fa-cube text-white text-sm" />
-            </div>
+            <img src={logo} alt="logo" className="w-8 h-8 rounded-lg object-contain" />
             <span className="font-bold text-base">ميك بورتفوليو</span>
           </Link>
           {/* Close button — second child → LEFT in RTL */}
