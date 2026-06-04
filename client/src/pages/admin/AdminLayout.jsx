@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth.jsx';
+import logo from '../../assets/logo/3DIndustrialPortfolio.png';
 
 export default function AdminLayout() {
   const { admin, logout } = useAuth();
@@ -24,12 +25,10 @@ export default function AdminLayout() {
       <aside className={`${collapsed ? 'w-16' : 'w-64'} flex-shrink-0 bg-[#0f1117] border-l border-white/5 flex flex-col transition-all duration-200`}>
         {/* Logo */}
         <div className="h-16 flex items-center px-4 border-b border-white/5">
-          <div className="flex items-center gap-3 overflow-hidden">
-            <div className="w-9 h-9 flex-shrink-0 bg-blue-600 rounded-xl flex items-center justify-center">
-              <i className="fa-solid fa-cube text-white text-sm" />
-            </div>
+          <Link to="/" className="flex items-center gap-3 overflow-hidden">
+            <img src={logo} alt="logo" className="w-9 h-9 flex-shrink-0 rounded-xl object-contain" />
             {!collapsed && <span className="font-bold text-sm whitespace-nowrap">ميك بورتفوليو</span>}
-          </div>
+          </Link>
           <button onClick={() => setCollapsed(!collapsed)} className="mr-auto text-slate-500 hover:text-white transition-colors">
             <i className={`fa-solid ${collapsed ? 'fa-chevron-left' : 'fa-chevron-right'} text-xs`} />
           </button>
@@ -75,15 +74,6 @@ export default function AdminLayout() {
             <i className="fa-solid fa-right-from-bracket w-4 text-center flex-shrink-0" />
             {!collapsed && <span>تسجيل الخروج</span>}
           </button>
-          <a
-            href="/"
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center gap-3 w-full px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors mt-1"
-          >
-            <i className="fa-solid fa-arrow-up-right-from-square w-4 text-center flex-shrink-0" />
-            {!collapsed && <span>عرض الموقع</span>}
-          </a>
         </div>
       </aside>
 

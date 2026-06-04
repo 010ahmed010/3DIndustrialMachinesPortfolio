@@ -1,6 +1,7 @@
 import React, {
   useEffect,
   useState,
+  useRef,
   Suspense,
   Component,
   useMemo,
@@ -171,7 +172,7 @@ function HeroModel({ url, scale, posY }) {
 }
 
 /* ── Hero 3-D canvas ── */
-function HeroCanvas({ model }) {
+function HeroCanvas({ model, autoRotate, enablePan, orbitRef }) {
   return (
     <>
       <ModelLoadingOverlay />
@@ -223,9 +224,11 @@ function HeroCanvas({ model }) {
           />
 
           <OrbitControls
-            autoRotate
+            ref={orbitRef}
+            autoRotate={autoRotate}
             autoRotateSpeed={1.2}
-            enablePan={false}
+            enablePan={enablePan}
+            enableZoom={true}
             minDistance={1.8}
             maxDistance={8}
             maxPolarAngle={Math.PI / 2}
@@ -247,6 +250,14 @@ export default function HomePage() {
   });
   const [contactStatus, setContactStatus] = useState(null);
 
+  /* 3-D hero controls */
+  const [autoRotate, setAutoRotate] = useState(true);
+  const [enablePan, setEnablePan]   = useState(false);
+  const [zoomedIn, setZoomedIn]     = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const orbitRef         = useRef(null);
+  const heroContainerRef = useRef(null);
+
   /* Use the model selected at module-evaluation time (changes on every page load) */
   const heroModel = HERO_MODEL_THIS_VISIT;
 
@@ -256,6 +267,33 @@ export default function HomePage() {
       .then((r) => setModules(r.data.modules || []));
     api.get("/profile").then((r) => setProfile(r.data));
   }, []);
+
+  /* Sync fullscreen state with browser */
+  useEffect(() => {
+    const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", onFsChange);
+    return () => document.removeEventListener("fullscreenchange", onFsChange);
+  }, []);
+
+  const handleZoom = () => {
+    const ctrl = orbitRef.current;
+    if (!ctrl) return;
+    if (!zoomedIn) {
+      ctrl.dollyIn(1.8);
+    } else {
+      ctrl.dollyOut(1.8);
+    }
+    ctrl.update();
+    setZoomedIn((v) => !v);
+  };
+
+  const handleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      heroContainerRef.current?.requestFullscreen();
+    } else {
+      document.exitFullscreen();
+    }
+  };
 
   const handleContact = async (e) => {
     e.preventDefault();
@@ -304,27 +342,58 @@ export default function HomePage() {
           dir="ltr"
         >
           {/* ── 3D Canvas — LEFT on desktop / TOP on mobile ── */}
-          <div className="relative flex-1 min-h-[60vh] lg:min-h-screen">
+          <div ref={heroContainerRef} className="relative flex-1 min-h-[60vh] lg:min-h-screen">
             <div className="absolute inset-0">
-              <HeroCanvas model={heroModel} />
+              <HeroCanvas
+                model={heroModel}
+                autoRotate={autoRotate}
+                enablePan={enablePan}
+                orbitRef={orbitRef}
+              />
             </div>
 
             {/* Control buttons — left edge */}
             <div className="absolute left-4 top-1/2 -translate-y-1/2 flex flex-col gap-2 z-10">
               {[
-                { icon: "fa-rotate", label: "تدوير" },
-                { icon: "fa-magnifying-glass-plus", label: "تكبير" },
-                { icon: "fa-up-down-left-right", label: "تحريك" },
-                { icon: "fa-expand", label: "ملء" },
+                {
+                  icon: "fa-rotate",
+                  label: "تدوير",
+                  active: autoRotate,
+                  onClick: () => setAutoRotate((v) => !v),
+                },
+                {
+                  icon: "fa-magnifying-glass-plus",
+                  label: "تكبير",
+                  active: zoomedIn,
+                  onClick: handleZoom,
+                },
+                {
+                  icon: "fa-up-down-left-right",
+                  label: "تحريك",
+                  active: enablePan,
+                  onClick: () => setEnablePan((v) => !v),
+                },
+                {
+                  icon: isFullscreen ? "fa-compress" : "fa-expand",
+                  label: "ملء",
+                  active: isFullscreen,
+                  onClick: handleFullscreen,
+                },
               ].map((c, i) => (
-                <div
+                <button
                   key={i}
                   dir="rtl"
-                  className="w-12 h-12 bg-[#0f1520]/80 backdrop-blur border border-white/10 rounded-lg flex flex-col items-center justify-center gap-0.5 cursor-pointer hover:border-blue-500/60 transition-colors"
+                  onClick={c.onClick}
+                  title={c.label}
+                  className={`w-12 h-12 backdrop-blur rounded-lg flex flex-col items-center justify-center gap-0.5 cursor-pointer transition-all ${
+                    c.active
+                      ? "bg-blue-600/30 border border-blue-500/70 shadow-lg shadow-blue-500/20"
+                      : "bg-[#0f1520]/80 border border-white/10 hover:border-blue-500/60"
+                  }`}
                 >
-                  <i className={`fa-solid ${c.icon} text-slate-400 text-xs`} />
-                  <span className="text-[9px] text-slate-500">{c.label}</span>
-                </div>
+                  <i className={`fa-solid ${c.icon} text-xs ${c.active ? "text-blue-300" : "text-slate-400"}`} />
+                  <span className={`text-[9px] ${c.active ? "text-blue-300" : "text-slate-500"}`}>{c.label}</span>
+                </button>
               ))}
             </div>
 

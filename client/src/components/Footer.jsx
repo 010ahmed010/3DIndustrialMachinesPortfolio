@@ -1,4 +1,6 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
+import logo from '../assets/logo/3DIndustrialPortfolio.png';
 
 export default function Footer({ profile }) {
   return (
@@ -32,12 +34,10 @@ export default function Footer({ profile }) {
         <div className="grid grid-cols-1 md:grid-cols-6 gap-8">
           {/* Brand */}
           <div className="md:col-span-2">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <i className="fa-solid fa-cube text-white text-sm" />
-              </div>
+            <Link to="/" className="flex items-center gap-2 mb-4">
+              <img src={logo} alt="logo" className="w-8 h-8 rounded-lg object-contain" />
               <span className="font-bold text-lg">ميك بورتفوليو</span>
-            </div>
+            </Link>
             <p className="text-slate-400 text-sm leading-relaxed mb-6">
               منصة متخصصة لمهندسي SolidWorks لعرض مشاريعهم بنماذج ثلاثية الأبعاد تفاعلية.
             </p>
