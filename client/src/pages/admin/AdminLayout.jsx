@@ -10,12 +10,8 @@ export default function AdminLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  /* Close mobile menu on route change */
-  useEffect(() => {
-    setMobileOpen(false);
-  }, [location.pathname]);
+  useEffect(() => { setMobileOpen(false); }, [location.pathname]);
 
-  /* Close mobile menu on resize to desktop */
   useEffect(() => {
     const onResize = () => { if (window.innerWidth >= 1024) setMobileOpen(false); };
     window.addEventListener('resize', onResize);
@@ -29,16 +25,15 @@ export default function AdminLayout() {
 
   const navLinks = [
     { to: '/admin/dashboard', icon: 'fa-grid-2', label: 'لوحة التحكم' },
-    { to: '/admin/modules', icon: 'fa-cube', label: 'المشاريع ثلاثية الأبعاد' },
-    { to: '/admin/settings', icon: 'fa-gear', label: 'الإعدادات' },
+    { to: '/admin/modules',   icon: 'fa-cube',   label: 'المشاريع ثلاثية الأبعاد' },
+    { to: '/admin/settings',  icon: 'fa-gear',   label: 'الإعدادات' },
   ];
 
   const SidebarContent = () => (
     <>
-      {/* Logo / Header */}
+      {/* Header */}
       <div className="h-16 flex items-center border-b border-white/5 flex-shrink-0">
         {collapsed ? (
-          /* Collapsed: only the toggle button, centered */
           <button
             onClick={() => setCollapsed(false)}
             className="w-full flex items-center justify-center text-slate-400 hover:text-white transition-colors h-full"
@@ -47,7 +42,6 @@ export default function AdminLayout() {
             <i className="fa-solid fa-chevron-left text-sm" />
           </button>
         ) : (
-          /* Expanded: logo + text + collapse button */
           <div className="flex items-center w-full px-4 gap-2">
             <Link to="/" className="flex items-center gap-2 overflow-hidden flex-1 min-w-0">
               <img src={logo} alt="logo" className="w-8 h-8 flex-shrink-0 rounded-xl object-contain" />
@@ -64,7 +58,7 @@ export default function AdminLayout() {
         )}
       </div>
 
-      {/* Nav links */}
+      {/* Nav */}
       <nav className="flex-1 py-4 space-y-1 px-2 overflow-y-auto">
         {navLinks.map(link => (
           <NavLink
@@ -113,9 +107,9 @@ export default function AdminLayout() {
   );
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] font-arabic" dir="rtl">
+    <div className="min-h-screen bg-[#0a0a0f] font-arabic flex flex-row" dir="rtl">
 
-      {/* ── Mobile backdrop overlay ── */}
+      {/* Mobile backdrop */}
       {mobileOpen && (
         <div
           className="fixed inset-0 bg-black/60 z-40 lg:hidden"
@@ -126,9 +120,11 @@ export default function AdminLayout() {
       {/* ── Sidebar ── */}
       <aside
         className={`
-          fixed top-0 right-0 h-full z-50 bg-[#0f1117] border-l border-white/5 flex flex-col transition-all duration-200
-          lg:static lg:z-auto lg:translate-x-0 lg:flex-shrink-0
-          ${collapsed ? 'lg:w-16 w-64' : 'w-64'}
+          fixed top-0 right-0 h-full z-50 bg-[#0f1117] border-l border-white/5
+          flex flex-col transition-all duration-200
+          lg:sticky lg:top-0 lg:h-screen lg:z-auto lg:translate-x-0 lg:flex-shrink-0
+          ${collapsed ? 'lg:w-16' : 'lg:w-64'}
+          w-64
           ${mobileOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
         `}
       >
@@ -136,11 +132,8 @@ export default function AdminLayout() {
       </aside>
 
       {/* ── Main area ── */}
-      <div
-        className={`flex flex-col min-h-screen transition-all duration-200
-          ${collapsed ? 'lg:mr-16' : 'lg:mr-64'}
-        `}
-      >
+      <div className="flex-1 flex flex-col min-h-screen min-w-0">
+
         {/* Mobile top bar */}
         <header className="lg:hidden flex items-center h-14 px-4 bg-[#0f1117] border-b border-white/5 flex-shrink-0">
           <button
