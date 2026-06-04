@@ -2,7 +2,8 @@ import express from 'express';
 import multer from 'multer';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
-import { query } from '../utils/db.js';
+import Module from '../models/Module.js';
+import Admin from '../models/Admin.js';
 import { protect } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -30,63 +31,24 @@ const upload = multer({
   }
 });
 
-const toModule = (row) => row ? {
-  _id: row.id,
-  id: row.id,
-  titleAr: row.title_ar,
-  titleEn: row.title_en,
-  descriptionAr: row.description_ar,
-  descriptionEn: row.description_en,
-  category: row.category,
-  designer: row.designer,
-  modelFile: row.model_file,
-  modelFormat: row.model_format,
-  thumbnailUrl: row.thumbnail_url,
-  sketches: row.sketches || [],
-  materials: row.materials,
-  specifications: row.specifications,
-  features: row.features,
-  status: row.status,
-  likes: row.likes || 0,
-  dislikes: row.dislikes || 0,
-  views: row.views || 0,
-  softwareVersion: row.software_version,
-  partsCount: row.parts_count,
-  projectType: row.project_type,
-  createdAt: row.created_at,
-  updatedAt: row.updated_at,
-} : null;
-
 router.get('/', async (req, res) => {
   try {
     const { page = 1, limit = 12, category, status = 'published', search } = req.query;
-    const offset = (page - 1) * limit;
-    const params = [];
-    let where = [];
-    let idx = 1;
+    const filter = {};
+    if (status) filter.status = status;
+    if (category) filter.category = category;
+    if (search) filter.$or = [
+      { titleAr: { $regex: search, $options: 'i' } },
+      { titleEn: { $regex: search, $options: 'i' } },
+    ];
 
-    if (status) { where.push(`status = $${idx++}`); params.push(status); }
-    if (category) { where.push(`category = $${idx++}`); params.push(category); }
-    if (search) {
-      where.push(`(title_ar ILIKE $${idx} OR title_en ILIKE $${idx})`);
-      params.push(`%${search}%`);
-      idx++;
-    }
+    const total = await Module.countDocuments(filter);
+    const modules = await Module.find(filter)
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * Number(limit))
+      .limit(Number(limit));
 
-    const whereClause = where.length ? 'WHERE ' + where.join(' AND ') : '';
-    const countRes = await query(`SELECT COUNT(*) FROM modules ${whereClause}`, params);
-    const total = parseInt(countRes.rows[0].count);
-
-    const dataRes = await query(
-      `SELECT * FROM modules ${whereClause} ORDER BY created_at DESC LIMIT $${idx} OFFSET $${idx+1}`,
-      [...params, Number(limit), Number(offset)]
-    );
-
-    res.json({
-      modules: dataRes.rows.map(toModule),
-      total,
-      pages: Math.ceil(total / limit)
-    });
+    res.json({ modules, total, pages: Math.ceil(total / limit) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
@@ -95,8 +57,8 @@ router.get('/', async (req, res) => {
 
 router.get('/all', protect, async (req, res) => {
   try {
-    const result = await query('SELECT * FROM modules ORDER BY created_at DESC');
-    res.json({ modules: result.rows.map(toModule) });
+    const modules = await Module.find().sort({ createdAt: -1 });
+    res.json({ modules });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -104,11 +66,10 @@ router.get('/all', protect, async (req, res) => {
 
 router.get('/:id', async (req, res) => {
   try {
-    const result = await query('SELECT * FROM modules WHERE id = $1', [req.params.id]);
-    if (!result.rows[0]) return res.status(404).json({ error: 'Module not found' });
-    await query('UPDATE modules SET views = views + 1 WHERE id = $1', [req.params.id]);
-    const mod = toModule(result.rows[0]);
+    const mod = await Module.findById(req.params.id);
+    if (!mod) return res.status(404).json({ error: 'Module not found' });
     mod.views = (mod.views || 0) + 1;
+    await mod.save();
     res.json(mod);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -121,8 +82,7 @@ router.post('/', protect, upload.fields([
 ]), async (req, res) => {
   try {
     const { titleAr, titleEn, descriptionAr, descriptionEn, category, designer, materials, specifications, features, softwareVersion, partsCount, projectType, status } = req.body;
-    let modelFile = null, modelFormat = null;
-    let sketches = [];
+    let modelFile = null, modelFormat = null, sketches = [];
 
     if (req.files?.modelFile?.[0]) {
       modelFile = '/uploads/models/' + req.files.modelFile[0].filename;
@@ -132,18 +92,19 @@ router.post('/', protect, upload.fields([
       sketches = req.files.sketches.map(f => '/uploads/sketches/' + f.filename);
     }
 
-    const result = await query(
-      `INSERT INTO modules (title_ar, title_en, description_ar, description_en, category, designer, model_file, model_format, sketches, materials, specifications, features, status, software_version, parts_count, project_type)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING *`,
-      [titleAr, titleEn, descriptionAr, descriptionEn, category, designer, modelFile, modelFormat, sketches, materials, specifications, features, status || 'pending', softwareVersion, partsCount ? parseInt(partsCount) : null, projectType]
-    );
+    const mod = await Module.create({
+      titleAr, titleEn, descriptionAr, descriptionEn, category, designer,
+      modelFile, modelFormat, sketches, materials, specifications, features,
+      status: status || 'pending', softwareVersion,
+      partsCount: partsCount ? parseInt(partsCount) : undefined,
+      projectType,
+    });
 
-    await query(
-      `UPDATE admins SET audit_log = audit_log || $1::jsonb WHERE id = $2`,
-      [JSON.stringify([{ action: 'upload_module', detail: `Uploaded: ${titleEn}`, timestamp: new Date() }]), req.admin.id]
-    );
+    await Admin.findByIdAndUpdate(req.admin.id, {
+      $push: { auditLog: { action: 'upload_module', detail: `Uploaded: ${titleEn}`, timestamp: new Date() } }
+    });
 
-    res.status(201).json(toModule(result.rows[0]));
+    res.status(201).json(mod);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
@@ -156,12 +117,12 @@ router.put('/:id', protect, upload.fields([
 ]), async (req, res) => {
   try {
     const { titleAr, titleEn, descriptionAr, descriptionEn, category, designer, materials, specifications, features, softwareVersion, partsCount, projectType, status } = req.body;
-    const existing = await query('SELECT * FROM modules WHERE id = $1', [req.params.id]);
-    if (!existing.rows[0]) return res.status(404).json({ error: 'Not found' });
+    const existing = await Module.findById(req.params.id);
+    if (!existing) return res.status(404).json({ error: 'Not found' });
 
-    let modelFile = existing.rows[0].model_file;
-    let modelFormat = existing.rows[0].model_format;
-    let sketches = existing.rows[0].sketches || [];
+    let modelFile = existing.modelFile;
+    let modelFormat = existing.modelFormat;
+    let sketches = existing.sketches || [];
 
     if (req.files?.modelFile?.[0]) {
       modelFile = '/uploads/models/' + req.files.modelFile[0].filename;
@@ -171,12 +132,15 @@ router.put('/:id', protect, upload.fields([
       sketches = req.files.sketches.map(f => '/uploads/sketches/' + f.filename);
     }
 
-    const result = await query(
-      `UPDATE modules SET title_ar=$1,title_en=$2,description_ar=$3,description_en=$4,category=$5,designer=$6,model_file=$7,model_format=$8,sketches=$9,materials=$10,specifications=$11,features=$12,status=$13,software_version=$14,parts_count=$15,project_type=$16,updated_at=NOW()
-       WHERE id=$17 RETURNING *`,
-      [titleAr, titleEn, descriptionAr, descriptionEn, category, designer, modelFile, modelFormat, sketches, materials, specifications, features, status, softwareVersion, partsCount ? parseInt(partsCount) : null, projectType, req.params.id]
-    );
-    res.json(toModule(result.rows[0]));
+    Object.assign(existing, {
+      titleAr, titleEn, descriptionAr, descriptionEn, category, designer,
+      modelFile, modelFormat, sketches, materials, specifications, features,
+      status, softwareVersion,
+      partsCount: partsCount ? parseInt(partsCount) : existing.partsCount,
+      projectType,
+    });
+    await existing.save();
+    res.json(existing);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -184,7 +148,7 @@ router.put('/:id', protect, upload.fields([
 
 router.delete('/:id', protect, async (req, res) => {
   try {
-    await query('DELETE FROM modules WHERE id = $1', [req.params.id]);
+    await Module.findByIdAndDelete(req.params.id);
     res.json({ message: 'Module deleted' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -193,8 +157,8 @@ router.delete('/:id', protect, async (req, res) => {
 
 router.post('/:id/like', async (req, res) => {
   try {
-    const result = await query('UPDATE modules SET likes = likes + 1 WHERE id = $1 RETURNING likes, dislikes', [req.params.id]);
-    res.json(result.rows[0]);
+    const mod = await Module.findByIdAndUpdate(req.params.id, { $inc: { likes: 1 } }, { new: true });
+    res.json({ likes: mod.likes, dislikes: mod.dislikes });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -202,8 +166,8 @@ router.post('/:id/like', async (req, res) => {
 
 router.post('/:id/dislike', async (req, res) => {
   try {
-    const result = await query('UPDATE modules SET dislikes = dislikes + 1 WHERE id = $1 RETURNING likes, dislikes', [req.params.id]);
-    res.json(result.rows[0]);
+    const mod = await Module.findByIdAndUpdate(req.params.id, { $inc: { dislikes: 1 } }, { new: true });
+    res.json({ likes: mod.likes, dislikes: mod.dislikes });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

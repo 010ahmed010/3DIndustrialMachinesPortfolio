@@ -1,23 +1,10 @@
-import pg from 'pg';
-
-const { Pool } = pg;
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-});
-
-pool.on('error', (err) => {
-  console.error('Unexpected DB error', err);
-});
-
-export const query = (text, params) => pool.query(text, params);
-export const getClient = () => pool.connect();
+import mongoose from 'mongoose';
 
 export const connectDB = async () => {
-  const client = await pool.connect();
-  client.release();
-  console.log('PostgreSQL connected');
+  const uri = process.env.MONGODB_URI;
+  if (!uri) throw new Error('MONGODB_URI environment variable is not set');
+  await mongoose.connect(uri, { dbName: 'mech_portfolio' });
+  console.log('MongoDB connected');
 };
 
-export default pool;
+export default mongoose;
