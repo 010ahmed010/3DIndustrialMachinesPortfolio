@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth.jsx';
+import logo from '../../assets/logo/3DIndustrialPortfolio.png';
 
 export default function AdminLoginPage() {
   const [form, setForm] = useState({ username: '', password: '' });
@@ -25,10 +26,10 @@ export default function AdminLoginPage() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center font-arabic" dir="rtl">
-      <div className="w-full max-w-md">
+      <div className="w-full max-w-md px-4">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-600/30">
-            <i className="fa-solid fa-cube text-white text-2xl" />
+          <div className="flex justify-center mb-4">
+            <img src={logo} alt="logo" className="w-16 h-16 rounded-2xl object-contain shadow-lg shadow-blue-600/20" />
           </div>
           <h1 className="text-2xl font-bold mb-1">لوحة التحكم</h1>
           <p className="text-slate-400 text-sm">تسجيل الدخول للمدير</p>
@@ -45,9 +46,9 @@ export default function AdminLoginPage() {
                   value={form.username}
                   onChange={e => setForm(p => ({...p, username: e.target.value}))}
                   required
-                  className="w-full bg-[#0f1117] border border-white/10 rounded-lg pr-10 pl-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-colors"
+                  className="w-full bg-[#0f1117] border border-white/10 rounded-lg pr-10 pl-4 py-3 text-white text-right focus:outline-none focus:border-blue-500 transition-colors"
                   placeholder="اسم المستخدم"
-                  dir="ltr"
+                  dir="rtl"
                 />
               </div>
             </div>
@@ -60,9 +61,9 @@ export default function AdminLoginPage() {
                   value={form.password}
                   onChange={e => setForm(p => ({...p, password: e.target.value}))}
                   required
-                  className="w-full bg-[#0f1117] border border-white/10 rounded-lg pr-10 pl-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-colors"
+                  className="w-full bg-[#0f1117] border border-white/10 rounded-lg pr-10 pl-4 py-3 text-white text-right focus:outline-none focus:border-blue-500 transition-colors"
                   placeholder="كلمة المرور"
-                  dir="ltr"
+                  dir="rtl"
                 />
               </div>
             </div>
@@ -88,9 +89,10 @@ export default function AdminLoginPage() {
           </form>
 
           <div className="mt-6 pt-5 border-t border-white/5 text-center">
-            <p className="text-slate-500 text-xs">
-              عند أول تسجيل دخول، يتم إنشاء حساب المدير تلقائياً
-            </p>
+            <Link to="/" className="inline-flex items-center gap-2 text-blue-400 hover:text-blue-300 text-sm transition-colors">
+              <i className="fa-solid fa-arrow-right text-xs" />
+              <span>العودة إلى الصفحة الرئيسية</span>
+            </Link>
           </div>
         </div>
       </div>
