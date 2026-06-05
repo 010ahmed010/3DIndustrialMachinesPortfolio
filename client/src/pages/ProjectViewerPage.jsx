@@ -1,13 +1,67 @@
-import React, { useEffect, useState, Suspense } from 'react';
+import React, { useEffect, useState, Suspense, useRef, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Environment, Grid, useGLTF, Html, Center } from '@react-three/drei';
+import { Canvas, useThree } from '@react-three/fiber';
+import { OrbitControls, Environment, Grid, useGLTF, Html, Center, useAnimations } from '@react-three/drei';
 import * as THREE from 'three';
 import api from '../utils/api.js';
 
-function ModelViewer({ url, format }) {
+function GLBModel({ url, displayMode, isPlaying }) {
+  const { scene, animations } = useGLTF(url);
+  const { actions, names } = useAnimations(animations, scene);
+
+  useEffect(() => {
+    if (!names.length) return;
+    if (isPlaying) {
+      names.forEach(name => actions[name]?.reset().play());
+    } else {
+      names.forEach(name => actions[name]?.paused === false && actions[name]?.stop());
+    }
+  }, [isPlaying, actions, names]);
+
+  useEffect(() => {
+    const originals = [];
+    scene.traverse((child) => {
+      if (child.isMesh && child.material) {
+        const mats = Array.isArray(child.material) ? child.material : [child.material];
+        mats.forEach(mat => {
+          originals.push({ mat, wireframe: mat.wireframe, transparent: mat.transparent, opacity: mat.opacity, depthWrite: mat.depthWrite });
+          if (displayMode === 'wireframe') {
+            mat.wireframe = true;
+            mat.transparent = false;
+            mat.opacity = 1;
+          } else if (displayMode === 'xray') {
+            mat.wireframe = false;
+            mat.transparent = true;
+            mat.opacity = 0.18;
+            mat.depthWrite = false;
+          } else {
+            mat.wireframe = false;
+            mat.transparent = false;
+            mat.opacity = 1;
+            mat.depthWrite = true;
+          }
+          mat.needsUpdate = true;
+        });
+      }
+    });
+    return () => {
+      originals.forEach(({ mat, wireframe, transparent, opacity, depthWrite }) => {
+        mat.wireframe = wireframe;
+        mat.transparent = transparent;
+        mat.opacity = opacity;
+        mat.depthWrite = depthWrite;
+        mat.needsUpdate = true;
+      });
+    };
+  }, [scene, displayMode]);
+
+  return <Center><primitive object={scene} /></Center>;
+}
+
+function ModelViewer({ url, format, displayMode, isPlaying }) {
   if (!url) return null;
-  if (format === 'glb' || format === 'gltf') return <GLBModel url={url} />;
+  if (format === 'glb' || format === 'gltf')
+    return <GLBModel url={url} displayMode={displayMode} isPlaying={isPlaying} />;
   return (
     <Html center>
       <div className="text-center text-slate-400">
@@ -16,15 +70,6 @@ function ModelViewer({ url, format }) {
         <p className="text-xs text-slate-500 mt-1">يتطلب تحويل إلى GLB</p>
       </div>
     </Html>
-  );
-}
-
-function GLBModel({ url }) {
-  const { scene } = useGLTF(url);
-  return (
-    <Center>
-      <primitive object={scene} />
-    </Center>
   );
 }
 
@@ -51,16 +96,71 @@ function PlaceholderModel() {
   );
 }
 
+function CameraController({ action, onActionDone, orbitRef }) {
+  const { camera, scene, gl } = useThree();
+
+  useEffect(() => {
+    if (!action) return;
+
+    if (action === 'reset') {
+      camera.position.set(3, 2, 5);
+      if (orbitRef.current) {
+        orbitRef.current.target.set(0, 0, 0);
+        orbitRef.current.update();
+      }
+    } else if (action === 'fit') {
+      const box = new THREE.Box3();
+      scene.traverse(obj => { if (obj.isMesh) box.expandByObject(obj); });
+      if (!box.isEmpty()) {
+        const size = box.getSize(new THREE.Vector3());
+        const center = box.getCenter(new THREE.Vector3());
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const fov = camera.fov * (Math.PI / 180);
+        const dist = (maxDim / 2) / Math.tan(fov / 2) * 1.6;
+        camera.position.set(center.x, center.y + maxDim * 0.3, center.z + dist);
+        if (orbitRef.current) {
+          orbitRef.current.target.copy(center);
+          orbitRef.current.update();
+        }
+      }
+    } else if (action === 'screenshot') {
+      gl.render(scene, camera);
+      const link = document.createElement('a');
+      link.download = 'model.png';
+      link.href = gl.domElement.toDataURL('image/png');
+      link.click();
+    }
+
+    onActionDone();
+  }, [action]);
+
+  return null;
+}
+
+const ENV_PRESETS = [
+  { key: 'studio', icon: 'fa-lightbulb', label: 'استوديو' },
+  { key: 'city', icon: 'fa-city', label: 'مدينة' },
+  { key: 'forest', icon: 'fa-tree', label: 'غابة' },
+  { key: 'night', icon: 'fa-moon', label: 'ليل' },
+];
+
 export default function ProjectViewerPage() {
   const { id } = useParams();
   const [module, setModule] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('3d');
   const [displayMode, setDisplayMode] = useState('shaded');
+  const [envPreset, setEnvPreset] = useState('studio');
+  const [showGrid, setShowGrid] = useState(true);
+  const [autoRotate, setAutoRotate] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [cameraAction, setCameraAction] = useState(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [liked, setLiked] = useState(false);
   const [disliked, setDisliked] = useState(false);
-  const [wireframe, setWireframe] = useState(false);
-  const [fullscreen, setFullscreen] = useState(false);
+
+  const orbitRef = useRef();
+  const viewerRef = useRef();
 
   useEffect(() => {
     api.get(`/modules/${id}`)
@@ -68,6 +168,12 @@ export default function ProjectViewerPage() {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
 
   const handleLike = async () => {
     if (liked) return;
@@ -82,6 +188,18 @@ export default function ProjectViewerPage() {
     setModule(m => ({ ...m, dislikes: r.data.dislikes }));
     setDisliked(true);
   };
+
+  const toggleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+      viewerRef.current?.requestFullscreen();
+    } else {
+      document.exitFullscreen();
+    }
+  }, []);
+
+  const fireAction = useCallback((action) => {
+    setCameraAction(action);
+  }, []);
 
   if (loading) return (
     <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
@@ -112,6 +230,47 @@ export default function ProjectViewerPage() {
     { id: 'description', label: 'الوصف' },
   ];
 
+  const bottomButtons = [
+    {
+      icon: 'fa-house',
+      title: 'إعادة ضبط الكاميرا',
+      action: () => fireAction('reset'),
+    },
+    {
+      icon: isFullscreen ? 'fa-compress' : 'fa-expand',
+      title: isFullscreen ? 'تصغير' : 'ملء الشاشة',
+      action: toggleFullscreen,
+    },
+    {
+      icon: 'fa-rotate',
+      title: 'تدوير تلقائي',
+      action: () => setAutoRotate(v => !v),
+      active: autoRotate,
+    },
+    {
+      icon: isPlaying ? 'fa-pause' : 'fa-play',
+      title: isPlaying ? 'إيقاف الحركة' : 'تشغيل الحركة',
+      action: () => setIsPlaying(v => !v),
+      active: isPlaying,
+    },
+    {
+      icon: 'fa-border-all',
+      title: 'إظهار/إخفاء الشبكة',
+      action: () => setShowGrid(v => !v),
+      active: showGrid,
+    },
+    {
+      icon: 'fa-camera',
+      title: 'لقطة شاشة',
+      action: () => fireAction('screenshot'),
+    },
+    {
+      icon: 'fa-arrows-maximize',
+      title: 'ضبط العرض للنموذج',
+      action: () => fireAction('fit'),
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white font-arabic" dir="rtl">
       {/* Top bar */}
@@ -127,12 +286,6 @@ export default function ProjectViewerPage() {
         <i className="fa-solid fa-chevron-left text-slate-600 text-xs" />
         <span className="text-white text-sm">{module.titleAr}</span>
         <div className="mr-auto flex items-center gap-3">
-          <button className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-white transition-colors">
-            <i className="fa-solid fa-sun text-sm" />
-          </button>
-          <button className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-white transition-colors">
-            <i className="fa-solid fa-bell text-sm" />
-          </button>
           <div className="flex items-center gap-2 text-sm">
             <div className="w-7 h-7 bg-blue-600 rounded-full flex items-center justify-center">
               <i className="fa-solid fa-user text-white text-xs" />
@@ -143,7 +296,7 @@ export default function ProjectViewerPage() {
       </div>
 
       <div className="flex h-[calc(100vh-49px)]">
-        {/* Left Sidebar - Project Info */}
+        {/* Left Sidebar */}
         <div className="w-44 bg-[#0f1117] border-l border-white/5 flex flex-col">
           <button
             onClick={() => window.history.back()}
@@ -153,7 +306,6 @@ export default function ProjectViewerPage() {
             <span>رجوع</span>
           </button>
 
-          {/* Thumbnail */}
           <div className="mx-3 mt-3 aspect-square bg-[#151821] rounded-lg overflow-hidden border border-white/5">
             {module.thumbnailUrl ? (
               <img src={module.thumbnailUrl} alt={module.titleAr} className="w-full h-full object-cover" />
@@ -169,7 +321,6 @@ export default function ProjectViewerPage() {
             <p className="text-blue-400 text-xs mb-3">{module.category}</p>
             <p className="text-slate-400 text-xs leading-relaxed mb-4">{module.descriptionAr}</p>
 
-            {/* Meta */}
             <div className="space-y-2">
               {module.softwareVersion && (
                 <div className="flex items-center gap-2 text-xs">
@@ -207,14 +358,13 @@ export default function ProjectViewerPage() {
               </div>
             </div>
 
-            {/* Other Views */}
             {module.sketches?.length > 0 && (
               <div className="mt-4">
                 <h4 className="text-xs text-slate-500 mb-2 font-semibold">عروض أخرى</h4>
                 <div className="grid grid-cols-2 gap-1.5">
                   {module.sketches.slice(0, 4).map((sk, i) => (
                     <div key={i} className="aspect-square bg-[#151821] rounded border border-white/5 overflow-hidden cursor-pointer hover:border-blue-500/30">
-                      <img src={sk} alt={`عرض ${i+1}`} className="w-full h-full object-cover" />
+                      <img src={sk} alt={`عرض ${i + 1}`} className="w-full h-full object-cover" />
                     </div>
                   ))}
                 </div>
@@ -223,7 +373,7 @@ export default function ProjectViewerPage() {
           </div>
         </div>
 
-        {/* Main 3D Viewer */}
+        {/* Main Viewer */}
         <div className="flex-1 flex flex-col">
           {/* Tab Bar */}
           <div className="bg-[#0f1117] border-b border-white/5 flex items-center px-4">
@@ -231,24 +381,18 @@ export default function ProjectViewerPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-5 py-3 text-sm font-semibold border-b-2 transition-colors ${
-                  activeTab === tab.id
-                    ? 'border-blue-500 text-white'
-                    : 'border-transparent text-slate-400 hover:text-white'
-                }`}
+                className={`px-5 py-3 text-sm font-semibold border-b-2 transition-colors ${activeTab === tab.id ? 'border-blue-500 text-white' : 'border-transparent text-slate-400 hover:text-white'}`}
               >
                 {tab.label}
               </button>
             ))}
           </div>
 
-          {/* Viewer Canvas */}
           {activeTab === '3d' && (
-            <div className={`flex-1 relative ${fullscreen ? 'fixed inset-0 z-50' : ''}`}>
+            <div ref={viewerRef} className="flex-1 relative">
               <Canvas
-                className="canvas-container"
                 camera={{ position: [3, 2, 5], fov: 45 }}
-                gl={{ antialias: true }}
+                gl={{ antialias: true, preserveDrawingBuffer: true }}
                 shadows
               >
                 <color attach="background" args={['#0f1117']} />
@@ -266,36 +410,52 @@ export default function ProjectViewerPage() {
                   </Html>
                 }>
                   {module.modelFile ? (
-                    <ModelViewer url={module.modelFile} format={module.modelFormat} />
+                    <ModelViewer
+                      url={module.modelFile}
+                      format={module.modelFormat}
+                      displayMode={displayMode}
+                      isPlaying={isPlaying}
+                    />
                   ) : (
                     <PlaceholderModel />
                   )}
                 </Suspense>
 
-                <Grid
-                  infiniteGrid
-                  cellSize={0.5}
-                  cellThickness={0.5}
-                  cellColor="#1e293b"
-                  sectionSize={2}
-                  sectionThickness={1}
-                  sectionColor="#334155"
-                  fadeDistance={20}
-                  fadeStrength={1}
-                />
+                {showGrid && (
+                  <Grid
+                    infiniteGrid
+                    cellSize={0.5}
+                    cellThickness={0.5}
+                    cellColor="#1e293b"
+                    sectionSize={2}
+                    sectionThickness={1}
+                    sectionColor="#334155"
+                    fadeDistance={20}
+                    fadeStrength={1}
+                  />
+                )}
 
                 <OrbitControls
+                  ref={orbitRef}
                   enablePan={true}
                   enableZoom={true}
                   enableRotate={true}
                   minDistance={1}
                   maxDistance={20}
+                  autoRotate={autoRotate}
+                  autoRotateSpeed={2}
                 />
 
-                <Environment preset="studio" />
+                <Environment preset={envPreset} />
+
+                <CameraController
+                  action={cameraAction}
+                  onActionDone={() => setCameraAction(null)}
+                  orbitRef={orbitRef}
+                />
               </Canvas>
 
-              {/* Controls instruction overlay */}
+              {/* Controls hint */}
               <div className="absolute top-4 right-4 bg-black/40 backdrop-blur-sm rounded-xl p-3 text-xs text-slate-300 border border-white/10">
                 <div className="flex items-center gap-2 mb-1.5">
                   <i className="fa-solid fa-computer-mouse text-slate-400 w-3" />
@@ -310,20 +470,16 @@ export default function ProjectViewerPage() {
 
               {/* Bottom controls */}
               <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-black/50 backdrop-blur-sm rounded-xl p-2 border border-white/10">
-                {[
-                  { icon: 'fa-house', title: 'مركز' },
-                  { icon: 'fa-expand', title: 'ملء الشاشة', action: () => setFullscreen(!fullscreen) },
-                  { icon: 'fa-rotate', title: 'تدوير' },
-                  { icon: 'fa-play', title: 'تشغيل' },
-                  { icon: 'fa-grid-2', title: 'شبكة' },
-                  { icon: 'fa-cube', title: 'مكعب' },
-                  { icon: 'fa-arrows-maximize', title: 'توسيع' },
-                ].map((btn, i) => (
+                {bottomButtons.map((btn, i) => (
                   <button
                     key={i}
                     onClick={btn.action}
                     title={btn.title}
-                    className="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                    className={`w-9 h-9 flex items-center justify-center rounded-lg transition-colors ${
+                      btn.active
+                        ? 'bg-blue-600/30 text-blue-400 border border-blue-500/40'
+                        : 'text-slate-400 hover:text-white hover:bg-white/10'
+                    }`}
                   >
                     <i className={`fa-solid ${btn.icon} text-xs`} />
                   </button>
@@ -356,7 +512,7 @@ export default function ProjectViewerPage() {
                 <div className="grid grid-cols-2 gap-4">
                   {module.sketches.map((sk, i) => (
                     <div key={i} className="bg-[#151821] rounded-xl border border-white/5 overflow-hidden">
-                      <img src={sk} alt={`رسم فني ${i+1}`} className="w-full" />
+                      <img src={sk} alt={`رسم فني ${i + 1}`} className="w-full" />
                     </div>
                   ))}
                 </div>
@@ -397,45 +553,52 @@ export default function ProjectViewerPage() {
           )}
         </div>
 
-        {/* Right Panel - Display Settings */}
+        {/* Right Panel */}
         <div className="w-52 bg-[#0f1117] border-r border-white/5 p-4 overflow-y-auto">
           <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4">وضع العرض</h3>
-
           <div className="space-y-2 mb-6">
-            {['shaded', 'wireframe', 'xray'].map(mode => (
-              <label key={mode} className="flex items-center gap-2 cursor-pointer">
-                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${displayMode === mode ? 'border-blue-500' : 'border-slate-600'}`}>
-                  {displayMode === mode && <div className="w-2 h-2 bg-blue-500 rounded-full" />}
+            {[
+              { value: 'shaded', label: 'معتم' },
+              { value: 'wireframe', label: 'شبكي' },
+              { value: 'xray', label: 'شفاف' },
+            ].map(({ value, label }) => (
+              <label key={value} className="flex items-center gap-2 cursor-pointer group" onClick={() => setDisplayMode(value)}>
+                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${displayMode === value ? 'border-blue-500' : 'border-slate-600 group-hover:border-slate-400'}`}>
+                  {displayMode === value && <div className="w-2 h-2 bg-blue-500 rounded-full" />}
                 </div>
-                <input type="radio" name="displayMode" value={mode} checked={displayMode === mode} onChange={e => setDisplayMode(e.target.value)} className="hidden" />
-                <span className="text-sm">{mode === 'shaded' ? 'معتم' : mode === 'wireframe' ? 'شبكي' : 'شفاف'}</span>
+                <span className="text-sm">{label}</span>
               </label>
             ))}
           </div>
 
           <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">البيئة</h3>
           <div className="grid grid-cols-4 gap-1.5 mb-6">
-            {['studio', 'city', 'forest', 'night'].map(env => (
-              <div key={env} className="aspect-square rounded-lg bg-[#151821] border border-white/10 hover:border-blue-500/50 cursor-pointer flex items-center justify-center">
-                <i className="fa-solid fa-image text-slate-600 text-xs" />
-              </div>
+            {ENV_PRESETS.map(({ key, icon, label }) => (
+              <button
+                key={key}
+                onClick={() => setEnvPreset(key)}
+                title={label}
+                className={`aspect-square rounded-lg border flex flex-col items-center justify-center gap-1 transition-colors ${
+                  envPreset === key
+                    ? 'border-blue-500/70 bg-blue-600/20 text-blue-400'
+                    : 'border-white/10 bg-[#151821] hover:border-blue-500/30 text-slate-500'
+                }`}
+              >
+                <i className={`fa-solid ${icon} text-xs`} />
+              </button>
             ))}
           </div>
 
           <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">الرؤية</h3>
           <div className="space-y-2 mb-6">
-            {['all', 'selected'].map(vis => (
-              <label key={vis} className="flex items-center gap-2 cursor-pointer">
-                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${vis === 'all' ? 'border-blue-500' : 'border-slate-600'}`}>
-                  {vis === 'all' && <div className="w-2 h-2 bg-blue-500 rounded-full" />}
-                </div>
-                <span className="text-sm">{vis === 'all' ? 'كل القطع' : 'القطع المحددة'}</span>
-                {vis === 'selected' && <span className="text-xs text-slate-600 mr-auto">0</span>}
-              </label>
-            ))}
+            <label className="flex items-center gap-2 cursor-pointer">
+              <div className="w-4 h-4 rounded-full border-2 border-blue-500 flex items-center justify-center">
+                <div className="w-2 h-2 bg-blue-500 rounded-full" />
+              </div>
+              <span className="text-sm">كل القطع</span>
+            </label>
           </div>
 
-          {/* Materials Table */}
           {module.materials && (
             <div>
               <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">المواد</h3>
@@ -443,10 +606,13 @@ export default function ProjectViewerPage() {
             </div>
           )}
 
-          {/* Download */}
           {module.modelFile && (
             <div className="mt-6">
-              <a href={module.modelFile} download className="flex items-center justify-center gap-2 w-full bg-blue-600 hover:bg-blue-700 text-white rounded-lg py-2.5 text-sm font-semibold transition-colors">
+              <a
+                href={module.modelFile}
+                download
+                className="flex items-center justify-center gap-2 w-full bg-blue-600 hover:bg-blue-700 text-white rounded-lg py-2.5 text-sm font-semibold transition-colors"
+              >
                 <i className="fa-solid fa-download" />
                 <span>تحميل الملفات</span>
               </a>
