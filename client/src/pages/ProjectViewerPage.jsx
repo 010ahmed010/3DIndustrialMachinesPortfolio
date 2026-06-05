@@ -1,7 +1,7 @@
 import React, { useEffect, useState, Suspense, useRef, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Canvas, useThree } from '@react-three/fiber';
-import { OrbitControls, Environment, Grid, useGLTF, Html, Center, useAnimations } from '@react-three/drei';
+import { OrbitControls, Environment, Grid, useGLTF, Html, Center, useAnimations, GizmoHelper, GizmoViewport } from '@react-three/drei';
 import * as THREE from 'three';
 import api from '../utils/api.js';
 
@@ -156,8 +156,9 @@ export default function ProjectViewerPage() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [cameraAction, setCameraAction] = useState(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [liked, setLiked] = useState(false);
-  const [disliked, setDisliked] = useState(false);
+  const storedVote = localStorage.getItem(`vote_${id}`);
+  const [liked, setLiked] = useState(storedVote === 'liked');
+  const [disliked, setDisliked] = useState(storedVote === 'disliked');
 
   const orbitRef = useRef();
   const viewerRef = useRef();
@@ -176,17 +177,19 @@ export default function ProjectViewerPage() {
   }, []);
 
   const handleLike = async () => {
-    if (liked) return;
+    if (liked || disliked) return;
     const r = await api.post(`/modules/${id}/like`);
     setModule(m => ({ ...m, likes: r.data.likes }));
     setLiked(true);
+    localStorage.setItem(`vote_${id}`, 'liked');
   };
 
   const handleDislike = async () => {
-    if (disliked) return;
+    if (liked || disliked) return;
     const r = await api.post(`/modules/${id}/dislike`);
     setModule(m => ({ ...m, dislikes: r.data.dislikes }));
     setDisliked(true);
+    localStorage.setItem(`vote_${id}`, 'disliked');
   };
 
   const toggleFullscreen = useCallback(() => {
@@ -453,6 +456,14 @@ export default function ProjectViewerPage() {
                   onActionDone={() => setCameraAction(null)}
                   orbitRef={orbitRef}
                 />
+
+                <GizmoHelper alignment="bottom-left" margin={[70, 70]}>
+                  <GizmoViewport
+                    axisColors={['#ef4444', '#22c55e', '#3b82f6']}
+                    labelColor="white"
+                    hideNegativeAxes
+                  />
+                </GizmoHelper>
               </Canvas>
 
               {/* Controls hint */}
