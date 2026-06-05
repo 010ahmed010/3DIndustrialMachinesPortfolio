@@ -6,6 +6,7 @@ import mongoSanitize from 'express-mongo-sanitize';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { connectDB } from './utils/db.js';
 import modulesRouter from './routes/modules.js';
@@ -18,6 +19,11 @@ import statsRouter from './routes/stats.js';
 dotenv.config();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+const UPLOADS_ROOT = process.env.UPLOADS_DIR || path.join(__dirname, '../../../uploads');
+fs.mkdirSync(path.join(UPLOADS_ROOT, 'models'), { recursive: true });
+fs.mkdirSync(path.join(UPLOADS_ROOT, 'sketches'), { recursive: true });
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 const isProduction = process.env.NODE_ENV === 'production';
@@ -36,7 +42,7 @@ app.use(morgan('dev'));
 const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200 });
 app.use(limiter);
 
-app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
+app.use('/uploads', express.static(UPLOADS_ROOT));
 
 app.use('/api/modules', modulesRouter);
 app.use('/api/auth', authRouter);

@@ -9,7 +9,7 @@ import { protect } from '../middleware/auth.js';
 
 const router = express.Router();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const UPLOADS_ROOT = path.join(__dirname, '../../../uploads');
+const UPLOADS_ROOT = process.env.UPLOADS_DIR || path.join(__dirname, '../../../uploads');
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {

@@ -29,7 +29,11 @@ import ProjectCard from "../components/ProjectCard.jsx";
    ─────────────────────────────────────────────────────────────────────────── */
 const HERO_MODELS = [
   // mech_drone  — original hero model
-  { url: "/models/mech_drone/scene.gltf", scale: 2.2, posY: -0.5 },
+  {
+    url: "models/new_titan_droneman_head_v2/scene.gltf",
+    scale: 0.2,
+    posY: -0.5,
+  },
   // deadnaut    — tall armoured robot
   { url: "/models/deadnaut/scene.gltf", scale: 0.38, posY: -0.9 },
   // drone       — wide quad-drone
@@ -252,10 +256,10 @@ export default function HomePage() {
 
   /* 3-D hero controls */
   const [autoRotate, setAutoRotate] = useState(true);
-  const [enablePan, setEnablePan]   = useState(false);
-  const [zoomedIn, setZoomedIn]     = useState(false);
+  const [enablePan, setEnablePan] = useState(false);
+  const [zoomedIn, setZoomedIn] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const orbitRef         = useRef(null);
+  const orbitRef = useRef(null);
   const heroContainerRef = useRef(null);
 
   /* Use the model selected at module-evaluation time (changes on every page load) */
@@ -342,7 +346,10 @@ export default function HomePage() {
           dir="ltr"
         >
           {/* ── 3D Canvas — LEFT on desktop / TOP on mobile ── */}
-          <div ref={heroContainerRef} className="relative flex-1 min-h-[60vh] lg:min-h-screen">
+          <div
+            ref={heroContainerRef}
+            className="relative flex-1 min-h-[60vh] lg:min-h-screen"
+          >
             <div className="absolute inset-0">
               <HeroCanvas
                 model={heroModel}
@@ -391,8 +398,14 @@ export default function HomePage() {
                       : "bg-[#0f1520]/80 border border-white/10 hover:border-blue-500/60"
                   }`}
                 >
-                  <i className={`fa-solid ${c.icon} text-xs ${c.active ? "text-blue-300" : "text-slate-400"}`} />
-                  <span className={`text-[9px] ${c.active ? "text-blue-300" : "text-slate-500"}`}>{c.label}</span>
+                  <i
+                    className={`fa-solid ${c.icon} text-xs ${c.active ? "text-blue-300" : "text-slate-400"}`}
+                  />
+                  <span
+                    className={`text-[9px] ${c.active ? "text-blue-300" : "text-slate-500"}`}
+                  >
+                    {c.label}
+                  </span>
                 </button>
               ))}
             </div>
