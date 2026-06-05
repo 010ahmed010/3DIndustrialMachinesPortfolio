@@ -1,7 +1,7 @@
 import React, { useEffect, useState, Suspense, useRef, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Canvas, useThree } from '@react-three/fiber';
-import { OrbitControls, Environment, Grid, useGLTF, Html, Center, useAnimations, GizmoHelper, GizmoViewport } from '@react-three/drei';
+import { Canvas, useThree, useFrame } from '@react-three/fiber';
+import { OrbitControls, Environment, Grid, useGLTF, Html, Center, useAnimations } from '@react-three/drei';
 import * as THREE from 'three';
 import api from '../utils/api.js';
 
@@ -137,6 +137,107 @@ function CameraController({ action, onActionDone, orbitRef }) {
   return null;
 }
 
+function CameraRotTracker({ rotRef }) {
+  const { camera } = useThree();
+  useFrame(() => { rotRef.current.copy(camera.quaternion); });
+  return null;
+}
+
+function AxisOverlay({ rotRef }) {
+  const canvasRef = useRef();
+
+  useEffect(() => {
+    const cvs = canvasRef.current;
+    if (!cvs) return;
+    const ctx = cvs.getContext('2d');
+    const S = 90;
+    cvs.width = S;
+    cvs.height = S;
+    const cx = S / 2, cy = S / 2;
+    const LEN = 28;
+    const HEAD = 7;
+    const HEAD_ANGLE = 0.42;
+
+    const AXES = [
+      { dir: new THREE.Vector3(1, 0, 0), color: '#f04040', label: 'X' },
+      { dir: new THREE.Vector3(0, 1, 0), color: '#30cc50', label: 'Y' },
+      { dir: new THREE.Vector3(0, 0, 1), color: '#4488ff', label: 'Z' },
+    ];
+
+    let raf;
+    const draw = () => {
+      ctx.clearRect(0, 0, S, S);
+
+      const q = rotRef.current;
+      const projected = AXES.map(ax => {
+        const v = ax.dir.clone().applyQuaternion(q);
+        return { ...ax, sx: cx + v.x * LEN, sy: cy - v.y * LEN, depth: v.z };
+      });
+
+      // draw back axes first (dimmed), then front
+      [...projected].sort((a, b) => a.depth - b.depth).forEach(({ sx, sy, color, label, depth }) => {
+        const alpha = depth >= 0 ? 1.0 : 0.28;
+        const angle = Math.atan2(sy - cy, sx - cx);
+
+        ctx.globalAlpha = alpha;
+
+        // shaft
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(sx, sy);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2.2;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+
+        // arrowhead (filled triangle)
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(sx - HEAD * Math.cos(angle - HEAD_ANGLE), sy - HEAD * Math.sin(angle - HEAD_ANGLE));
+        ctx.lineTo(sx - HEAD * Math.cos(angle + HEAD_ANGLE), sy - HEAD * Math.sin(angle + HEAD_ANGLE));
+        ctx.closePath();
+        ctx.fillStyle = color;
+        ctx.fill();
+
+        // label
+        const lx = sx + 11 * Math.cos(angle);
+        const ly = sy + 11 * Math.sin(angle);
+        ctx.font = 'bold 11px Arial, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = color;
+        ctx.fillText(label, lx, ly);
+      });
+
+      // origin dot
+      ctx.globalAlpha = 1;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 3.5, 0, Math.PI * 2);
+      ctx.fillStyle = '#cccccc';
+      ctx.fill();
+
+      raf = requestAnimationFrame(draw);
+    };
+
+    draw();
+    return () => cancelAnimationFrame(raf);
+  }, [rotRef]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{
+        position: 'absolute',
+        bottom: '72px',
+        left: '16px',
+        width: '90px',
+        height: '90px',
+        pointerEvents: 'none',
+      }}
+    />
+  );
+}
+
 const ENV_PRESETS = [
   { key: 'studio', icon: 'fa-lightbulb', label: 'استوديو' },
   { key: 'city', icon: 'fa-city', label: 'مدينة' },
@@ -162,6 +263,7 @@ export default function ProjectViewerPage() {
 
   const orbitRef = useRef();
   const viewerRef = useRef();
+  const axisRotRef = useRef(new THREE.Quaternion());
 
   useEffect(() => {
     api.get(`/modules/${id}`)
@@ -457,14 +559,10 @@ export default function ProjectViewerPage() {
                   orbitRef={orbitRef}
                 />
 
-                <GizmoHelper alignment="bottom-left" margin={[70, 70]}>
-                  <GizmoViewport
-                    axisColors={['#ef4444', '#22c55e', '#3b82f6']}
-                    labelColor="white"
-                    hideNegativeAxes
-                  />
-                </GizmoHelper>
+                <CameraRotTracker rotRef={axisRotRef} />
               </Canvas>
+
+              <AxisOverlay rotRef={axisRotRef} />
 
               {/* Controls hint */}
               <div className="absolute top-4 right-4 bg-black/40 backdrop-blur-sm rounded-xl p-3 text-xs text-slate-300 border border-white/10">
