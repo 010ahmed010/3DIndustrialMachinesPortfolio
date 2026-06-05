@@ -139,7 +139,7 @@ function CameraController({ action, onActionDone, orbitRef }) {
 
 function CameraRotTracker({ rotRef }) {
   const { camera } = useThree();
-  useFrame(() => { rotRef.current.copy(camera.quaternion); });
+  useFrame(() => { rotRef.current.copy(camera.matrixWorldInverse); });
   return null;
 }
 
@@ -168,9 +168,9 @@ function AxisOverlay({ rotRef }) {
     const draw = () => {
       ctx.clearRect(0, 0, S, S);
 
-      const q = rotRef.current;
+      const mat = rotRef.current;
       const projected = AXES.map(ax => {
-        const v = ax.dir.clone().applyQuaternion(q);
+        const v = ax.dir.clone().transformDirection(mat);
         return { ...ax, sx: cx + v.x * LEN, sy: cy - v.y * LEN, depth: v.z };
       });
 
@@ -263,7 +263,7 @@ export default function ProjectViewerPage() {
 
   const orbitRef = useRef();
   const viewerRef = useRef();
-  const axisRotRef = useRef(new THREE.Quaternion());
+  const axisRotRef = useRef(new THREE.Matrix4());
 
   useEffect(() => {
     api.get(`/modules/${id}`)
