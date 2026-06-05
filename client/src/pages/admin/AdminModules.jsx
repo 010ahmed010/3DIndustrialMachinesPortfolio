@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import api from '../../utils/api.js';
+import api, { uploadApi } from '../../utils/api.js';
 
 const CATEGORIES = ['ميكانيكية', 'تصميم صناعي', 'سيارات', 'روبوتات', 'فضاء', 'منتجات استهلاكية', 'أخرى'];
 
@@ -26,26 +26,43 @@ function UploadModal({ onClose, onSuccess, editModule }) {
   const [modelFile, setModelFile] = useState(null);
   const [sketches, setSketches] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [phase, setPhase] = useState('idle');
   const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setProgress(0);
+    setPhase('uploading');
     try {
       const fd = new FormData();
       Object.entries(form).forEach(([k, v]) => fd.append(k, v));
       if (modelFile) fd.append('modelFile', modelFile);
       sketches.forEach(s => fd.append('sketches', s));
 
+      const config = {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (e) => {
+          const pct = Math.round((e.loaded * 100) / e.total);
+          setProgress(pct);
+          if (pct === 100) setPhase('processing');
+        },
+      };
+
       if (editModule) {
-        await api.put(`/modules/${editModule._id}`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+        await uploadApi.put(`/modules/${editModule._id}`, fd, config);
       } else {
-        await api.post('/modules', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+        await uploadApi.post('/modules', fd, config);
       }
-      onSuccess();
+      setPhase('done');
+      setTimeout(() => onSuccess(), 400);
     } catch (err) {
-      setError(err.response?.data?.error || 'حدث خطأ');
+      setPhase('idle');
+      setProgress(0);
+      const msg = err.response?.data?.error || err.message || 'حدث خطأ أثناء الرفع';
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -181,12 +198,37 @@ function UploadModal({ onClose, onSuccess, editModule }) {
             </div>
           )}
 
+          {/* Progress bar */}
+          {loading && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs text-slate-400">
+                <span>
+                  {phase === 'uploading' && 'جاري رفع الملف...'}
+                  {phase === 'processing' && 'جاري المعالجة...'}
+                  {phase === 'done' && 'تم بنجاح ✓'}
+                </span>
+                <span className="font-mono tabular-nums">
+                  {phase === 'uploading' ? `${progress}%` : phase === 'processing' ? '100%' : ''}
+                </span>
+              </div>
+              <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-300 ${phase === 'done' ? 'bg-green-500' : 'bg-blue-500'}`}
+                  style={{ width: phase === 'processing' || phase === 'done' ? '100%' : `${progress}%` }}
+                />
+              </div>
+            </div>
+          )}
+
           <div className="flex gap-3 pt-2">
-            <button type="button" onClick={onClose} className="flex-1 border border-white/10 text-slate-300 hover:text-white hover:border-white/20 py-2.5 rounded-xl text-sm font-medium transition-colors">
+            <button type="button" onClick={onClose} disabled={loading} className="flex-1 border border-white/10 text-slate-300 hover:text-white hover:border-white/20 disabled:opacity-40 py-2.5 rounded-xl text-sm font-medium transition-colors">
               إلغاء
             </button>
-            <button type="submit" disabled={loading} className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white py-2.5 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2">
-              {loading ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /><span>جاري الرفع...</span></> : <><i className="fa-solid fa-cloud-upload-alt" /><span>{editModule ? 'حفظ التعديلات' : 'رفع المشروع'}</span></>}
+            <button type="submit" disabled={loading} className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white py-2.5 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2">
+              {loading
+                ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /><span>{phase === 'processing' ? 'جاري المعالجة...' : 'جاري الرفع...'}</span></>
+                : <><i className="fa-solid fa-cloud-upload-alt" /><span>{editModule ? 'حفظ التعديلات' : 'رفع المشروع'}</span></>
+              }
             </button>
           </div>
         </form>

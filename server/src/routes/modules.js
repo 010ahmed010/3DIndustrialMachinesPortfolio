@@ -79,7 +79,17 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-router.post('/', protect, upload.fields([
+const handleUpload = (fields) => (req, res, next) => {
+  upload.fields(fields)(req, res, (err) => {
+    if (err) {
+      console.error('Multer error:', err.message);
+      return res.status(400).json({ error: err.message });
+    }
+    next();
+  });
+};
+
+router.post('/', protect, handleUpload([
   { name: 'modelFile', maxCount: 1 },
   { name: 'sketches', maxCount: 10 }
 ]), async (req, res) => {
@@ -105,16 +115,16 @@ router.post('/', protect, upload.fields([
 
     await Admin.findByIdAndUpdate(req.admin.id, {
       $push: { auditLog: { action: 'upload_module', detail: `Uploaded: ${titleEn}`, timestamp: new Date() } }
-    });
+    }).catch(() => {});
 
     res.status(201).json(mod);
   } catch (err) {
-    console.error(err);
+    console.error('Module create error:', err);
     res.status(500).json({ error: err.message });
   }
 });
 
-router.put('/:id', protect, upload.fields([
+router.put('/:id', protect, handleUpload([
   { name: 'modelFile', maxCount: 1 },
   { name: 'sketches', maxCount: 10 }
 ]), async (req, res) => {
