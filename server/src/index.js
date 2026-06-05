@@ -20,7 +20,7 @@ dotenv.config();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const UPLOADS_ROOT = process.env.UPLOADS_DIR || path.join(__dirname, '../../../uploads');
+const UPLOADS_ROOT = process.env.UPLOADS_DIR || path.join(__dirname, '../../uploads');
 fs.mkdirSync(path.join(UPLOADS_ROOT, 'models'), { recursive: true });
 fs.mkdirSync(path.join(UPLOADS_ROOT, 'sketches'), { recursive: true });
 
