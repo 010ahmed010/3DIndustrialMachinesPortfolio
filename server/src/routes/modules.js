@@ -1,17 +1,20 @@
 import express from 'express';
 import multer from 'multer';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { v4 as uuidv4 } from 'uuid';
 import Module from '../models/Module.js';
 import Admin from '../models/Admin.js';
 import { protect } from '../middleware/auth.js';
 
 const router = express.Router();
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const UPLOADS_ROOT = path.join(__dirname, '../../../uploads');
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    if (file.fieldname === 'modelFile') cb(null, 'uploads/models/');
-    else cb(null, 'uploads/sketches/');
+    if (file.fieldname === 'modelFile') cb(null, path.join(UPLOADS_ROOT, 'models'));
+    else cb(null, path.join(UPLOADS_ROOT, 'sketches'));
   },
   filename: (req, file, cb) => {
     cb(null, uuidv4() + path.extname(file.originalname));
