@@ -172,7 +172,16 @@ router.delete('/:id', protect, async (req, res) => {
 
 router.post('/:id/like', async (req, res) => {
   try {
-    const mod = await Module.findByIdAndUpdate(req.params.id, { $inc: { likes: 1 } }, { new: true });
+    const { previousVote } = req.body; // 'liked' | 'disliked' | null
+    let inc = {};
+    if (previousVote === 'liked') {
+      inc = { likes: -1 };           // toggle off
+    } else if (previousVote === 'disliked') {
+      inc = { likes: 1, dislikes: -1 }; // switch from dislike → like
+    } else {
+      inc = { likes: 1 };            // fresh like
+    }
+    const mod = await Module.findByIdAndUpdate(req.params.id, { $inc: inc }, { new: true });
     res.json({ likes: mod.likes, dislikes: mod.dislikes });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -181,7 +190,16 @@ router.post('/:id/like', async (req, res) => {
 
 router.post('/:id/dislike', async (req, res) => {
   try {
-    const mod = await Module.findByIdAndUpdate(req.params.id, { $inc: { dislikes: 1 } }, { new: true });
+    const { previousVote } = req.body; // 'liked' | 'disliked' | null
+    let inc = {};
+    if (previousVote === 'disliked') {
+      inc = { dislikes: -1 };           // toggle off
+    } else if (previousVote === 'liked') {
+      inc = { dislikes: 1, likes: -1 }; // switch from like → dislike
+    } else {
+      inc = { dislikes: 1 };            // fresh dislike
+    }
+    const mod = await Module.findByIdAndUpdate(req.params.id, { $inc: inc }, { new: true });
     res.json({ likes: mod.likes, dislikes: mod.dislikes });
   } catch (err) {
     res.status(500).json({ error: err.message });
