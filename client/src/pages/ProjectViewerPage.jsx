@@ -305,6 +305,8 @@ export default function ProjectViewerPage() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [cameraAction, setCameraAction] = useState(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showMobileSettings, setShowMobileSettings] = useState(false);
+  const [showMobileInfo, setShowMobileInfo] = useState(false);
   const storedVote = localStorage.getItem(`vote_${id}`);
   const [liked, setLiked] = useState(storedVote === 'liked');
   const [disliked, setDisliked] = useState(storedVote === 'disliked');
@@ -423,41 +425,54 @@ export default function ProjectViewerPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white font-arabic" dir="rtl">
-      {/* Top bar */}
-      <div className="bg-[#0f1117] border-b border-white/5 px-6 py-3 flex items-center gap-3">
-        <div className="flex items-center gap-2 mb-0">
-          <div className="w-7 h-7 bg-blue-600 rounded flex items-center justify-center">
-            <i className="fa-solid fa-cube text-white text-xs" />
+    <div className="h-[100dvh] bg-[#0a0a0f] text-white font-arabic flex flex-col overflow-hidden" dir="rtl">
+
+      {/* ── Top Bar ── */}
+      <div className="bg-[#0f1117] border-b border-white/5 px-3 md:px-6 h-12 flex items-center gap-2 flex-shrink-0">
+        <button
+          onClick={() => window.history.back()}
+          className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/5 text-slate-400 hover:text-white flex-shrink-0 transition-colors"
+        >
+          <i className="fa-solid fa-arrow-right text-xs" />
+        </button>
+
+        {/* Brand + breadcrumbs — desktop */}
+        <div className="hidden md:flex items-center gap-2 flex-shrink-0">
+          <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center">
+            <i className="fa-solid fa-cube text-white text-[10px]" />
           </div>
-          <span className="font-bold">ميك بورتفوليو</span>
+          <span className="font-bold text-sm">ميك بورتفوليو</span>
         </div>
-        <i className="fa-solid fa-chevron-left text-slate-600 text-xs" />
-        <Link to="/#projects" className="text-slate-400 hover:text-white text-sm transition-colors">المشاريع</Link>
-        <i className="fa-solid fa-chevron-left text-slate-600 text-xs" />
-        <span className="text-white text-sm">{module.titleAr}</span>
-        <div className="mr-auto flex items-center gap-3">
-          <div className="flex items-center gap-2 text-sm">
-            <div className="w-7 h-7 bg-blue-600 rounded-full flex items-center justify-center">
-              <i className="fa-solid fa-user text-white text-xs" />
-            </div>
-            <span className="text-slate-300">{module.designer}</span>
+        <i className="hidden md:block fa-solid fa-chevron-left text-slate-600 text-xs" />
+        <Link to="/#projects" className="hidden md:block text-slate-400 hover:text-white text-sm transition-colors flex-shrink-0">المشاريع</Link>
+        <i className="hidden md:block fa-solid fa-chevron-left text-slate-600 text-xs" />
+
+        {/* Project title */}
+        <span className="text-white text-sm font-semibold flex-1 truncate">{module.titleAr}</span>
+
+        {/* Designer — desktop */}
+        <div className="hidden md:flex items-center gap-2 text-sm flex-shrink-0">
+          <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
+            <i className="fa-solid fa-user text-white text-[10px]" />
           </div>
+          <span className="text-slate-300 text-xs">{module.designer}</span>
         </div>
+
+        {/* Settings toggle — mobile / tablet */}
+        <button
+          onClick={() => setShowMobileSettings(v => !v)}
+          className="lg:hidden w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-white/5 flex-shrink-0 transition-colors"
+        >
+          <i className="fa-solid fa-sliders text-sm" />
+        </button>
       </div>
 
-      <div className="flex h-[calc(100vh-49px)]">
-        {/* Left Sidebar */}
-        <div className="w-44 bg-[#0f1117] border-l border-white/5 flex flex-col">
-          <button
-            onClick={() => window.history.back()}
-            className="flex items-center gap-2 px-4 py-3 text-slate-400 hover:text-white text-sm transition-colors border-b border-white/5"
-          >
-            <i className="fa-solid fa-arrow-right text-xs" />
-            <span>رجوع</span>
-          </button>
+      {/* ── Body ── */}
+      <div className="flex-1 flex flex-col lg:flex-row min-h-0">
 
-          <div className="mx-3 mt-3 aspect-square bg-[#151821] rounded-lg overflow-hidden border border-white/5">
+        {/* Left Sidebar — desktop only */}
+        <aside className="hidden lg:flex w-44 flex-col bg-[#0f1117] border-l border-white/5 flex-shrink-0 overflow-y-auto">
+          <div className="mx-3 mt-3 aspect-square bg-[#151821] rounded-lg overflow-hidden border border-white/5 flex-shrink-0">
             {module.thumbnailUrl ? (
               <img src={module.thumbnailUrl} alt={module.titleAr} className="w-full h-full object-cover" />
             ) : (
@@ -522,25 +537,29 @@ export default function ProjectViewerPage() {
               </div>
             )}
           </div>
-        </div>
+        </aside>
 
-        {/* Main Viewer */}
-        <div className="flex-1 flex flex-col">
-          {/* Tab Bar */}
-          <div className="bg-[#0f1117] border-b border-white/5 flex items-center px-4">
+        {/* Center column */}
+        <div className="flex-1 flex flex-col min-h-0 overflow-y-auto lg:overflow-hidden">
+
+          {/* Tab bar */}
+          <div className="bg-[#0f1117] border-b border-white/5 flex items-center overflow-x-auto flex-shrink-0" style={{ scrollbarWidth: 'none' }}>
             {tabs.map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-5 py-3 text-sm font-semibold border-b-2 transition-colors ${activeTab === tab.id ? 'border-blue-500 text-white' : 'border-transparent text-slate-400 hover:text-white'}`}
+                className={`px-3 md:px-5 py-3 text-xs md:text-sm font-semibold border-b-2 whitespace-nowrap transition-colors flex-shrink-0 ${
+                  activeTab === tab.id ? 'border-blue-500 text-white' : 'border-transparent text-slate-400 hover:text-white'
+                }`}
               >
                 {tab.label}
               </button>
             ))}
           </div>
 
+          {/* 3D Viewer */}
           {activeTab === '3d' && (
-            <div ref={viewerRef} className={isFullscreen ? 'fixed inset-0 z-50 bg-[#0f1117]' : 'flex-1 relative'}>
+            <div ref={viewerRef} className={isFullscreen ? 'fixed inset-0 z-50 bg-[#0f1117]' : 'flex-1 relative min-h-[55vh] lg:min-h-0'}>
               <Canvas
                 camera={{ position: [3, 2, 5], fov: 45 }}
                 gl={{ antialias: true, preserveDrawingBuffer: true }}
@@ -613,8 +632,8 @@ export default function ProjectViewerPage() {
 
               <AxisOverlay rotRef={axisRotRef} />
 
-              {/* Controls hint */}
-              <div className="absolute top-4 right-4 bg-black/40 backdrop-blur-sm rounded-xl p-3 text-xs text-slate-300 border border-white/10">
+              {/* Controls hint — desktop only */}
+              <div className="hidden md:block absolute top-4 right-4 bg-black/40 backdrop-blur-sm rounded-xl p-3 text-xs text-slate-300 border border-white/10">
                 <div className="flex items-center gap-2 mb-1.5">
                   <i className="fa-solid fa-computer-mouse text-slate-400 w-3" />
                   <span className="font-semibold text-slate-200">ضوابط التحكم</span>
@@ -627,13 +646,13 @@ export default function ProjectViewerPage() {
               </div>
 
               {/* Bottom controls */}
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-black/50 backdrop-blur-sm rounded-xl p-2 border border-white/10">
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-black/50 backdrop-blur-sm rounded-xl p-1.5 border border-white/10">
                 {bottomButtons.map((btn, i) => (
                   <button
                     key={i}
                     onClick={btn.action}
                     title={btn.title}
-                    className={`w-9 h-9 flex items-center justify-center rounded-lg transition-colors ${
+                    className={`w-8 h-8 md:w-9 md:h-9 flex items-center justify-center rounded-lg transition-colors ${
                       btn.active
                         ? 'bg-blue-600/30 text-blue-400 border border-blue-500/40'
                         : 'text-slate-400 hover:text-white hover:bg-white/10'
@@ -644,18 +663,18 @@ export default function ProjectViewerPage() {
                 ))}
               </div>
 
-              {/* Like/Dislike */}
-              <div className="absolute bottom-4 right-4 flex items-center gap-3">
+              {/* Like / Dislike */}
+              <div className="absolute bottom-4 right-4 flex items-center gap-2">
                 <button
                   onClick={handleLike}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${liked ? 'bg-blue-600 text-white' : 'bg-black/40 backdrop-blur-sm border border-white/10 text-slate-300 hover:text-white hover:border-blue-500/50'}`}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${liked ? 'bg-blue-600 text-white' : 'bg-black/40 backdrop-blur-sm border border-white/10 text-slate-300 hover:text-white hover:border-blue-500/50'}`}
                 >
                   <i className="fa-solid fa-thumbs-up" />
                   <span>{module.likes || 0}</span>
                 </button>
                 <button
                   onClick={handleDislike}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${disliked ? 'bg-red-600 text-white' : 'bg-black/40 backdrop-blur-sm border border-white/10 text-slate-300 hover:text-white hover:border-red-500/50'}`}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${disliked ? 'bg-red-600 text-white' : 'bg-black/40 backdrop-blur-sm border border-white/10 text-slate-300 hover:text-white hover:border-red-500/50'}`}
                 >
                   <i className="fa-solid fa-thumbs-down" />
                   <span>{module.dislikes || 0}</span>
@@ -665,9 +684,9 @@ export default function ProjectViewerPage() {
           )}
 
           {activeTab === 'drawings' && (
-            <div className="flex-1 p-6 overflow-y-auto">
+            <div className="flex-1 p-4 md:p-6 overflow-y-auto">
               {module.sketches?.length > 0 ? (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {module.sketches.map((sk, i) => (
                     <div key={i} className="bg-[#151821] rounded-xl border border-white/5 overflow-hidden">
                       <img src={sk} alt={`رسم فني ${i + 1}`} className="w-full" />
@@ -675,7 +694,7 @@ export default function ProjectViewerPage() {
                   ))}
                 </div>
               ) : (
-                <div className="flex items-center justify-center h-full">
+                <div className="flex items-center justify-center h-full min-h-[200px]">
                   <div className="text-center text-slate-500">
                     <i className="fa-solid fa-drafting-compass text-5xl mb-4 block" />
                     <p>لا توجد رسومات فنية</p>
@@ -686,22 +705,24 @@ export default function ProjectViewerPage() {
           )}
 
           {activeTab === 'description' && (
-            <div className="flex-1 p-8 overflow-y-auto max-w-3xl">
-              <h2 className="text-2xl font-bold mb-4">{module.titleAr}</h2>
-              <p className="text-blue-400 mb-6">{module.titleEn}</p>
-              <div className="prose prose-invert">
-                <p className="text-slate-300 leading-relaxed">{module.descriptionAr}</p>
-                {module.descriptionEn && (
-                  <div className="mt-6 pt-6 border-t border-white/5" dir="ltr">
-                    <p className="text-slate-400 leading-relaxed">{module.descriptionEn}</p>
-                  </div>
-                )}
+            <div className="flex-1 p-5 md:p-8 overflow-y-auto">
+              <div className="max-w-3xl">
+                <h2 className="text-xl md:text-2xl font-bold mb-4">{module.titleAr}</h2>
+                <p className="text-blue-400 mb-6">{module.titleEn}</p>
+                <div className="prose prose-invert">
+                  <p className="text-slate-300 leading-relaxed">{module.descriptionAr}</p>
+                  {module.descriptionEn && (
+                    <div className="mt-6 pt-6 border-t border-white/5" dir="ltr">
+                      <p className="text-slate-400 leading-relaxed">{module.descriptionEn}</p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
 
           {activeTab === 'exploded' && (
-            <div className="flex-1 flex items-center justify-center">
+            <div className="flex-1 flex items-center justify-center min-h-[200px]">
               <div className="text-center text-slate-500">
                 <i className="fa-solid fa-arrows-to-circle text-5xl mb-4 block" />
                 <p className="text-lg font-medium">عرض مفكك</p>
@@ -709,10 +730,72 @@ export default function ProjectViewerPage() {
               </div>
             </div>
           )}
+
+          {/* Project info accordion — mobile / tablet only */}
+          <div className="lg:hidden border-t border-white/5 bg-[#0f1117] flex-shrink-0">
+            <button
+              onClick={() => setShowMobileInfo(v => !v)}
+              className="w-full flex items-center justify-between px-4 py-3 text-sm text-slate-300 hover:text-white transition-colors"
+            >
+              <span className="font-semibold">معلومات المشروع</span>
+              <i className={`fa-solid fa-chevron-${showMobileInfo ? 'up' : 'down'} text-xs text-slate-500`} />
+            </button>
+            {showMobileInfo && (
+              <div className="px-4 pb-5 space-y-3">
+                {module.thumbnailUrl && (
+                  <div className="w-20 h-20 bg-[#151821] rounded-lg overflow-hidden border border-white/5">
+                    <img src={module.thumbnailUrl} alt={module.titleAr} className="w-full h-full object-cover" />
+                  </div>
+                )}
+                <div>
+                  <h2 className="font-bold text-sm">{module.titleAr}</h2>
+                  <p className="text-blue-400 text-xs mt-0.5">{module.category}</p>
+                </div>
+                <p className="text-slate-400 text-xs leading-relaxed">{module.descriptionAr}</p>
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  {module.softwareVersion && (
+                    <div>
+                      <div className="text-slate-500">إصدار البرنامج</div>
+                      <div className="font-medium mt-0.5">{module.softwareVersion}</div>
+                    </div>
+                  )}
+                  {module.partsCount && (
+                    <div>
+                      <div className="text-slate-500">عدد القطع</div>
+                      <div className="font-medium mt-0.5">{module.partsCount}</div>
+                    </div>
+                  )}
+                  {module.projectType && (
+                    <div>
+                      <div className="text-slate-500">نوع المشروع</div>
+                      <div className="font-medium mt-0.5">{module.projectType}</div>
+                    </div>
+                  )}
+                  <div>
+                    <div className="text-slate-500">تاريخ الرفع</div>
+                    <div className="font-medium mt-0.5">{new Date(module.createdAt).toLocaleDateString('ar')}</div>
+                  </div>
+                </div>
+                {module.sketches?.length > 0 && (
+                  <div>
+                    <h4 className="text-xs text-slate-500 mb-2 font-semibold">عروض أخرى</h4>
+                    <div className="flex gap-2 overflow-x-auto pb-1">
+                      {module.sketches.slice(0, 6).map((sk, i) => (
+                        <div key={i} className="w-16 h-16 flex-shrink-0 bg-[#151821] rounded border border-white/5 overflow-hidden">
+                          <img src={sk} alt={`عرض ${i + 1}`} className="w-full h-full object-cover" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
         </div>
 
-        {/* Right Panel */}
-        <div className="w-52 bg-[#0f1117] border-r border-white/5 p-4 overflow-y-auto">
+        {/* Right Panel — desktop only */}
+        <aside className="hidden lg:block w-52 bg-[#0f1117] border-r border-white/5 p-4 overflow-y-auto flex-shrink-0">
           <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4">وضع العرض</h3>
           <div className="space-y-2 mb-6">
             {[
@@ -776,8 +859,95 @@ export default function ProjectViewerPage() {
               </a>
             </div>
           )}
-        </div>
+        </aside>
+
       </div>
+
+      {/* ── Mobile / Tablet — Settings Bottom Sheet ── */}
+      {showMobileSettings && (
+        <div
+          className="lg:hidden fixed inset-0 z-50 flex flex-col justify-end"
+          style={{ backgroundColor: 'rgba(0,0,0,0.65)' }}
+          onClick={() => setShowMobileSettings(false)}
+        >
+          <div
+            className="bg-[#0f1117] rounded-t-2xl border-t border-white/10 max-h-[80vh] overflow-y-auto"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-white/5">
+              <span className="font-semibold text-sm">إعدادات العرض</span>
+              <button
+                onClick={() => setShowMobileSettings(false)}
+                className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
+              >
+                <i className="fa-solid fa-xmark text-xs" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-6">
+              {/* Display mode */}
+              <div>
+                <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">وضع العرض</h3>
+                <div className="flex gap-2">
+                  {[
+                    { value: 'shaded', label: 'معتم' },
+                    { value: 'wireframe', label: 'شبكي' },
+                    { value: 'xray', label: 'شفاف' },
+                  ].map(({ value, label }) => (
+                    <button
+                      key={value}
+                      onClick={() => setDisplayMode(value)}
+                      className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border transition-colors ${
+                        displayMode === value
+                          ? 'bg-blue-600/20 border-blue-500/70 text-blue-400'
+                          : 'bg-[#151821] border-white/10 text-slate-400 hover:border-blue-500/30'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Environment */}
+              <div>
+                <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">البيئة</h3>
+                <div className="grid grid-cols-4 gap-2">
+                  {ENV_PRESETS.map(({ key, icon, label }) => (
+                    <button
+                      key={key}
+                      onClick={() => setEnvPreset(key)}
+                      title={label}
+                      className={`aspect-square rounded-xl border flex flex-col items-center justify-center gap-1 transition-colors ${
+                        envPreset === key
+                          ? 'border-blue-500/70 bg-blue-600/20 text-blue-400'
+                          : 'border-white/10 bg-[#151821] hover:border-blue-500/30 text-slate-500'
+                      }`}
+                    >
+                      <i className={`fa-solid ${icon} text-sm`} />
+                      <span className="text-[9px]">{label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Download */}
+              {module.modelFile && (
+                <a
+                  href={module.modelFile}
+                  download
+                  onClick={() => setShowMobileSettings(false)}
+                  className="flex items-center justify-center gap-2 w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-3 text-sm font-semibold transition-colors"
+                >
+                  <i className="fa-solid fa-download" />
+                  <span>تحميل الملفات</span>
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
