@@ -42,5 +42,4 @@ build = ["bash", "-c", "cd client && npm run build && cd ../server && npm instal
 [userenv]
 
 [userenv.shared]
-JWT_SECRET = "235952f07dacbd25f2e85b5e966c17a203dd67c73f346c9a7bf6d43f971441a7a5455bb6783cca076744e92643e94401"
 NODE_ENV = "development"
