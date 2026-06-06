@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth.jsx';
 import logo from '../../assets/logo/3DIndustrialPortfolio.png';
@@ -8,8 +8,13 @@ export default function AdminLoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, admin, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+
+  // Already logged in → go straight to dashboard
+  useEffect(() => {
+    if (!authLoading && admin) navigate('/admin/dashboard', { replace: true });
+  }, [admin, authLoading]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

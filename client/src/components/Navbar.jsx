@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import logo from "../assets/logo/3DIndustrialPortfolio.png";
+import { useAuth } from "../hooks/useAuth.jsx";
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
   const isAdmin = location.pathname.startsWith("/admin");
+  const { admin } = useAuth();
+  const adminLink = admin ? "/admin/dashboard" : "/admin/login";
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -77,10 +80,10 @@ export default function Navbar() {
           <div className="flex items-center gap-3">
             {!isAdmin && (
               <Link
-                to="/admin/login"
+                to={adminLink}
                 className="hidden md:flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors px-3 py-2"
               >
-                <i className="fa-solid fa-lock text-xs" />
+                <i className={`fa-solid ${admin ? 'fa-gauge' : 'fa-lock'} text-xs`} />
                 <span>لوحة التحكم</span>
               </Link>
             )}
@@ -172,11 +175,11 @@ export default function Navbar() {
         {/* Bottom action */}
         <div className="px-5 py-5 border-t border-white/5">
           <Link
-            to="/admin/login"
+            to={adminLink}
             onClick={close}
             className="flex items-center justify-center gap-3 w-full bg-blue-600/15 border border-blue-500/30 hover:bg-blue-600/25 text-blue-300 font-semibold py-3.5 rounded-xl transition-all"
           >
-            <i className="fa-solid fa-lock text-sm" />
+            <i className={`fa-solid ${admin ? 'fa-gauge' : 'fa-lock'} text-sm`} />
             <span>لوحة التحكم</span>
           </Link>
         </div>

@@ -23,7 +23,13 @@ export function AuthProvider({ children }) {
       setToken(token);
       api.get('/auth/me')
         .then(res => setAdmin(res.data))
-        .catch(() => { localStorage.removeItem('adminToken'); clearToken(); })
+        .catch(err => {
+          // Only discard token on 401 Unauthorized — not on network/server errors
+          if (err.response?.status === 401) {
+            localStorage.removeItem('adminToken');
+            clearToken();
+          }
+        })
         .finally(() => setLoading(false));
     } else {
       setLoading(false);
