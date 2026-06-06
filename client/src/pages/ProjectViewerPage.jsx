@@ -5,7 +5,7 @@ import { OrbitControls, Environment, Grid, useGLTF, Html, useAnimations, useProg
 import * as THREE from 'three';
 import api from '../utils/api.js';
 
-function GLBModel({ url, displayMode, isPlaying, orbitRef, fittedCamRef }) {
+function GLBModel({ url, displayMode, isPlaying, orbitRef, fittedCamRef, onLoad }) {
   const { scene, animations } = useGLTF(url);
   const { actions, names } = useAnimations(animations, scene);
   const { camera } = useThree();
@@ -17,7 +17,7 @@ function GLBModel({ url, displayMode, isPlaying, orbitRef, fittedCamRef }) {
     scene.scale.set(1, 1, 1);
 
     const box = new THREE.Box3().setFromObject(scene);
-    if (box.isEmpty()) return;
+    if (box.isEmpty()) { onLoad?.(); return; }
 
     const size = box.getSize(new THREE.Vector3());
     const center = box.getCenter(new THREE.Vector3());
@@ -56,6 +56,8 @@ function GLBModel({ url, displayMode, isPlaying, orbitRef, fittedCamRef }) {
         maxDist: maxDim * 30,
       };
     }
+
+    onLoad?.();
   }, [scene]);
 
   useEffect(() => {
@@ -107,30 +109,38 @@ function GLBModel({ url, displayMode, isPlaying, orbitRef, fittedCamRef }) {
   return <primitive object={scene} />;
 }
 
-function ViewerLoadingOverlay() {
-  const { active, progress } = useProgress();
-  if (!active) return null;
+function ViewerLoadingOverlay({ progress, visible }) {
+  if (!visible) return null;
   return (
-    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3 bg-[#0f1117]/90 border border-white/10 backdrop-blur-sm rounded-2xl px-5 py-3 shadow-xl pointer-events-none">
-      <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin flex-shrink-0" />
-      <div className="flex flex-col items-start gap-0.5">
-        <span className="text-white text-xs font-semibold leading-none">جاري التحميل...</span>
-        <div className="w-24 h-1 bg-slate-700 rounded-full overflow-hidden mt-1">
-          <div
-            className="h-full bg-blue-500 rounded-full transition-all duration-300"
-            style={{ width: `${Math.round(progress)}%` }}
-          />
+    <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+      <div className="flex flex-col items-center gap-5 bg-[#0d1119]/85 border border-white/10 backdrop-blur-md rounded-2xl px-10 py-8 shadow-2xl">
+        <div className="relative w-14 h-14">
+          <div className="absolute inset-0 rounded-full border-2 border-blue-500/20" />
+          <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-blue-500 animate-spin" />
+          <div className="absolute inset-2 rounded-full border border-blue-400/30 border-t-blue-400 animate-spin" style={{ animationDuration: '1.5s', animationDirection: 'reverse' }} />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <i className="fa-solid fa-cube text-blue-400 text-sm" />
+          </div>
+        </div>
+        <div className="flex flex-col items-center gap-2 w-full">
+          <span className="text-white text-sm font-semibold tracking-wide">جاري التحميل...</span>
+          <div className="w-44 h-1.5 bg-slate-700/80 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-blue-600 to-blue-400 rounded-full transition-all duration-200 ease-out"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          <span className="text-blue-400 text-xs tabular-nums font-medium">{Math.round(progress)}%</span>
         </div>
       </div>
-      <span className="text-blue-400 text-xs font-medium tabular-nums">{Math.round(progress)}%</span>
     </div>
   );
 }
 
-function ModelViewer({ url, format, displayMode, isPlaying, orbitRef, fittedCamRef }) {
+function ModelViewer({ url, format, displayMode, isPlaying, orbitRef, fittedCamRef, onLoad }) {
   if (!url) return null;
   if (format === 'glb' || format === 'gltf')
-    return <GLBModel url={url} displayMode={displayMode} isPlaying={isPlaying} orbitRef={orbitRef} fittedCamRef={fittedCamRef} />;
+    return <GLBModel url={url} displayMode={displayMode} isPlaying={isPlaying} orbitRef={orbitRef} fittedCamRef={fittedCamRef} onLoad={onLoad} />;
   return (
     <Html center>
       <div className="text-center text-slate-400">
@@ -329,6 +339,8 @@ export default function ProjectViewerPage() {
   const [showMobileInfo, setShowMobileInfo] = useState(false);
   const [liked, setLiked] = useState(false);
   const [disliked, setDisliked] = useState(false);
+  const [modelLoaded, setModelLoaded] = useState(false);
+  const [modelProgress, setModelProgress] = useState(0);
 
   const orbitRef = useRef();
   const viewerRef = useRef();
@@ -345,6 +357,30 @@ export default function ProjectViewerPage() {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [id]);
+
+  // Reset loading state when module changes
+  useEffect(() => {
+    if (!module) return;
+    setModelLoaded(false);
+    setModelProgress(0);
+  }, [module?._id]);
+
+  // Simulate smooth progress while model is loading (GLB fetch has no byte events)
+  useEffect(() => {
+    if (modelLoaded) return;
+    const tick = setInterval(() => {
+      setModelProgress(p => {
+        if (p >= 90) { clearInterval(tick); return p; }
+        return p + (90 - p) * 0.07;
+      });
+    }, 80);
+    return () => clearInterval(tick);
+  }, [modelLoaded, module?._id]);
+
+  const handleModelLoad = useCallback(() => {
+    setModelProgress(100);
+    setTimeout(() => setModelLoaded(true), 350);
+  }, []);
 
   // ESC key exits CSS-based fullscreen
   useEffect(() => {
@@ -581,7 +617,7 @@ export default function ProjectViewerPage() {
           {/* 3D Viewer */}
           {activeTab === '3d' && (
             <div ref={viewerRef} className={isFullscreen ? 'fixed inset-0 z-50 bg-[#0f1117]' : 'flex-1 relative min-h-[55vh] lg:min-h-0'}>
-              <ViewerLoadingOverlay />
+              <ViewerLoadingOverlay progress={modelProgress} visible={!modelLoaded} />
               <Canvas
                 camera={{ position: [3, 2, 5], fov: 45 }}
                 gl={{ antialias: true, preserveDrawingBuffer: true }}
@@ -602,6 +638,7 @@ export default function ProjectViewerPage() {
                       isPlaying={isPlaying}
                       orbitRef={orbitRef}
                       fittedCamRef={fittedCamRef}
+                      onLoad={handleModelLoad}
                     />
                   ) : (
                     <PlaceholderModel />
