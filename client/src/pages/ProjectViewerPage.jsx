@@ -1,7 +1,7 @@
 import React, { useEffect, useState, Suspense, useRef, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
-import { OrbitControls, Environment, Grid, useGLTF, Html, useAnimations } from '@react-three/drei';
+import { OrbitControls, Environment, Grid, useGLTF, Html, useAnimations, useProgress } from '@react-three/drei';
 import * as THREE from 'three';
 import api from '../utils/api.js';
 
@@ -105,6 +105,26 @@ function GLBModel({ url, displayMode, isPlaying, orbitRef, fittedCamRef }) {
   }, [scene, displayMode]);
 
   return <primitive object={scene} />;
+}
+
+function ViewerLoadingOverlay() {
+  const { active, progress } = useProgress();
+  if (!active) return null;
+  return (
+    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3 bg-[#0f1117]/90 border border-white/10 backdrop-blur-sm rounded-2xl px-5 py-3 shadow-xl pointer-events-none">
+      <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin flex-shrink-0" />
+      <div className="flex flex-col items-start gap-0.5">
+        <span className="text-white text-xs font-semibold leading-none">جاري التحميل...</span>
+        <div className="w-24 h-1 bg-slate-700 rounded-full overflow-hidden mt-1">
+          <div
+            className="h-full bg-blue-500 rounded-full transition-all duration-300"
+            style={{ width: `${Math.round(progress)}%` }}
+          />
+        </div>
+      </div>
+      <span className="text-blue-400 text-xs font-medium tabular-nums">{Math.round(progress)}%</span>
+    </div>
+  );
 }
 
 function ModelViewer({ url, format, displayMode, isPlaying, orbitRef, fittedCamRef }) {
@@ -561,6 +581,7 @@ export default function ProjectViewerPage() {
           {/* 3D Viewer */}
           {activeTab === '3d' && (
             <div ref={viewerRef} className={isFullscreen ? 'fixed inset-0 z-50 bg-[#0f1117]' : 'flex-1 relative min-h-[55vh] lg:min-h-0'}>
+              <ViewerLoadingOverlay />
               <Canvas
                 camera={{ position: [3, 2, 5], fov: 45 }}
                 gl={{ antialias: true, preserveDrawingBuffer: true }}
@@ -572,14 +593,7 @@ export default function ProjectViewerPage() {
                 <directionalLight position={[-5, 5, -5]} intensity={0.3} />
                 <pointLight position={[0, 5, 0]} intensity={0.8} color="#3b82f6" />
 
-                <Suspense fallback={
-                  <Html center>
-                    <div className="text-center">
-                      <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-                      <p className="text-slate-400 text-xs">جاري التحميل...</p>
-                    </div>
-                  </Html>
-                }>
+                <Suspense fallback={null}>
                   {module.modelFile ? (
                     <ModelViewer
                       url={module.modelFile}
