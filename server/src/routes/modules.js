@@ -1,6 +1,7 @@
 import express from 'express';
 import multer from 'multer';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { v4 as uuidv4 } from 'uuid';
 import Module from '../models/Module.js';
@@ -36,7 +37,7 @@ const upload = multer({
 
 router.get('/', async (req, res) => {
   try {
-    const { page = 1, limit = 12, category, status = 'published', search } = req.query;
+    const { page = 1, limit = 12, category, status = 'published', search, sort } = req.query;
     const filter = {};
     if (status) filter.status = status;
     if (category) filter.category = category;
@@ -45,9 +46,11 @@ router.get('/', async (req, res) => {
       { titleEn: { $regex: search, $options: 'i' } },
     ];
 
+    const sortOrder = sort === 'likes' ? { likes: -1 } : { createdAt: -1 };
+
     const total = await Module.countDocuments(filter);
     const modules = await Module.find(filter)
-      .sort({ createdAt: -1 })
+      .sort(sortOrder)
       .skip((page - 1) * Number(limit))
       .limit(Number(limit));
 
@@ -168,9 +171,24 @@ router.put('/:id', protect, handleUpload([
   }
 });
 
+const deleteFile = (filePath) => {
+  if (!filePath) return;
+  const abs = path.join(UPLOADS_ROOT, filePath.replace(/^\/uploads\//, ''));
+  fs.unlink(abs, () => {});
+};
+
 router.delete('/:id', protect, async (req, res) => {
   try {
-    await Module.findByIdAndDelete(req.params.id);
+    const mod = await Module.findById(req.params.id);
+    if (!mod) return res.status(404).json({ error: 'Module not found' });
+
+    deleteFile(mod.modelFile);
+    deleteFile(mod.thumbnailUrl);
+    if (Array.isArray(mod.sketches)) {
+      mod.sketches.forEach(s => deleteFile(s));
+    }
+
+    await mod.deleteOne();
     res.json({ message: 'Module deleted' });
   } catch (err) {
     res.status(500).json({ error: err.message });

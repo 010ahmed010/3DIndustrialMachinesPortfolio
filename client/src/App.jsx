@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './hooks/useAuth.jsx';
 import HomePage from './pages/HomePage.jsx';
 import ProjectViewerPage from './pages/ProjectViewerPage.jsx';
+import ProjectsPage from './pages/ProjectsPage.jsx';
 import AdminLoginPage from './pages/admin/AdminLoginPage.jsx';
 import AdminLayout from './pages/admin/AdminLayout.jsx';
 import AdminDashboard from './pages/admin/AdminDashboard.jsx';
@@ -15,6 +16,7 @@ export default function App() {
     <AuthProvider>
       <Routes>
         <Route path="/" element={<HomePage />} />
+        <Route path="/projects" element={<ProjectsPage />} />
         <Route path="/project/:id" element={<ProjectViewerPage />} />
         <Route path="/admin/login" element={<AdminLoginPage />} />
         <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>

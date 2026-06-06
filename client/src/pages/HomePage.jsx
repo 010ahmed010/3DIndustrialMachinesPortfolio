@@ -267,7 +267,7 @@ export default function HomePage() {
 
   useEffect(() => {
     api
-      .get("/modules?limit=6&status=published")
+      .get("/modules?limit=3&status=published&sort=likes")
       .then((r) => setModules(r.data.modules || []));
     api.get("/profile").then((r) => setProfile(r.data));
   }, []);
