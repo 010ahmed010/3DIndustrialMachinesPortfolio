@@ -1,31 +1,60 @@
 import React, { useEffect, useState, Suspense, useRef, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
-import { OrbitControls, Environment, Grid, useGLTF, Html, Center, useAnimations } from '@react-three/drei';
+import { OrbitControls, Environment, Grid, useGLTF, Html, useAnimations } from '@react-three/drei';
 import * as THREE from 'three';
 import api from '../utils/api.js';
 
-function GLBModel({ url, displayMode, isPlaying, orbitRef }) {
+function GLBModel({ url, displayMode, isPlaying, orbitRef, fittedCamRef }) {
   const { scene, animations } = useGLTF(url);
   const { actions, names } = useAnimations(animations, scene);
   const { camera } = useThree();
 
   useEffect(() => {
+    // Reset scene transform so bounding box reflects true model geometry
+    scene.position.set(0, 0, 0);
+    scene.rotation.set(0, 0, 0);
+    scene.scale.set(1, 1, 1);
+
     const box = new THREE.Box3().setFromObject(scene);
     if (box.isEmpty()) return;
+
     const size = box.getSize(new THREE.Vector3());
+    const center = box.getCenter(new THREE.Vector3());
+
+    // Ground: center on X/Z, bottom sits on Y=0
+    scene.position.set(-center.x, -box.min.y, -center.z);
+
     const maxDim = Math.max(size.x, size.y, size.z);
     const fov = camera.fov * (Math.PI / 180);
     const dist = (maxDim / 2) / Math.tan(fov / 2) * 1.8;
-    camera.position.set(dist * 0.6, dist * 0.45, dist);
+
+    // Look at a point 1/3 up the model height
+    const targetY = size.y * 0.33;
+
+    // Camera sits in front at a natural diagonal angle
+    const camPos = new THREE.Vector3(dist * 0.65, size.y * 0.45 + dist * 0.25, dist);
+
+    camera.position.copy(camPos);
     camera.near = maxDim * 0.001;
     camera.far = maxDim * 200;
     camera.updateProjectionMatrix();
+
     if (orbitRef?.current) {
-      orbitRef.current.target.set(0, 0, 0);
+      orbitRef.current.target.set(0, targetY, 0);
       orbitRef.current.minDistance = maxDim * 0.05;
       orbitRef.current.maxDistance = maxDim * 30;
       orbitRef.current.update();
+    }
+
+    // Store fitted state so reset button can restore this exact view
+    if (fittedCamRef) {
+      fittedCamRef.current = {
+        camPos: camPos.clone(),
+        target: new THREE.Vector3(0, targetY, 0),
+        minDist: maxDim * 0.05,
+        maxDist: maxDim * 30,
+      };
     }
   }, [scene]);
 
@@ -75,13 +104,13 @@ function GLBModel({ url, displayMode, isPlaying, orbitRef }) {
     };
   }, [scene, displayMode]);
 
-  return <Center><primitive object={scene} /></Center>;
+  return <primitive object={scene} />;
 }
 
-function ModelViewer({ url, format, displayMode, isPlaying, orbitRef }) {
+function ModelViewer({ url, format, displayMode, isPlaying, orbitRef, fittedCamRef }) {
   if (!url) return null;
   if (format === 'glb' || format === 'gltf')
-    return <GLBModel url={url} displayMode={displayMode} isPlaying={isPlaying} orbitRef={orbitRef} />;
+    return <GLBModel url={url} displayMode={displayMode} isPlaying={isPlaying} orbitRef={orbitRef} fittedCamRef={fittedCamRef} />;
   return (
     <Html center>
       <div className="text-center text-slate-400">
@@ -116,33 +145,32 @@ function PlaceholderModel() {
   );
 }
 
-function CameraController({ action, onActionDone, orbitRef }) {
+function CameraController({ action, onActionDone, orbitRef, fittedCamRef }) {
   const { camera, scene, gl } = useThree();
 
   useEffect(() => {
     if (!action) return;
 
-    if (action === 'reset') {
-      camera.position.set(3, 2, 5);
+    const applyFitted = () => {
+      if (!fittedCamRef?.current) return false;
+      const { camPos, target, minDist, maxDist } = fittedCamRef.current;
+      camera.position.copy(camPos);
       if (orbitRef.current) {
-        orbitRef.current.target.set(0, 0, 0);
+        orbitRef.current.target.copy(target);
+        orbitRef.current.minDistance = minDist;
+        orbitRef.current.maxDistance = maxDist;
         orbitRef.current.update();
       }
-    } else if (action === 'fit') {
-      const box = new THREE.Box3();
-      scene.traverse(obj => { if (obj.isMesh) box.expandByObject(obj); });
-      if (!box.isEmpty()) {
-        const size = box.getSize(new THREE.Vector3());
-        const center = box.getCenter(new THREE.Vector3());
-        const maxDim = Math.max(size.x, size.y, size.z);
-        const fov = camera.fov * (Math.PI / 180);
-        const dist = (maxDim / 2) / Math.tan(fov / 2) * 1.6;
-        camera.position.set(center.x, center.y + maxDim * 0.3, center.z + dist);
-        if (orbitRef.current) {
-          orbitRef.current.target.copy(center);
-          orbitRef.current.update();
-        }
+      return true;
+    };
+
+    if (action === 'reset') {
+      if (!applyFitted()) {
+        camera.position.set(3, 2, 5);
+        if (orbitRef.current) { orbitRef.current.target.set(0, 0, 0); orbitRef.current.update(); }
       }
+    } else if (action === 'fit') {
+      applyFitted();
     } else if (action === 'screenshot') {
       gl.render(scene, camera);
       const link = document.createElement('a');
@@ -284,6 +312,7 @@ export default function ProjectViewerPage() {
   const orbitRef = useRef();
   const viewerRef = useRef();
   const axisRotRef = useRef(new THREE.Matrix4());
+  const fittedCamRef = useRef(null);
 
   useEffect(() => {
     api.get(`/modules/${id}`)
@@ -292,10 +321,11 @@ export default function ProjectViewerPage() {
       .finally(() => setLoading(false));
   }, [id]);
 
+  // ESC key exits CSS-based fullscreen
   useEffect(() => {
-    const onChange = () => setIsFullscreen(!!document.fullscreenElement);
-    document.addEventListener('fullscreenchange', onChange);
-    return () => document.removeEventListener('fullscreenchange', onChange);
+    const onKey = (e) => { if (e.key === 'Escape') setIsFullscreen(false); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
   }, []);
 
   const handleLike = async () => {
@@ -315,11 +345,7 @@ export default function ProjectViewerPage() {
   };
 
   const toggleFullscreen = useCallback(() => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {});
-    } else {
-      document.exitFullscreen();
-    }
+    setIsFullscreen(v => !v);
   }, []);
 
   const fireAction = useCallback((action) => {
@@ -514,7 +540,7 @@ export default function ProjectViewerPage() {
           </div>
 
           {activeTab === '3d' && (
-            <div ref={viewerRef} className="flex-1 relative">
+            <div ref={viewerRef} className={isFullscreen ? 'fixed inset-0 z-50 bg-[#0f1117]' : 'flex-1 relative'}>
               <Canvas
                 camera={{ position: [3, 2, 5], fov: 45 }}
                 gl={{ antialias: true, preserveDrawingBuffer: true }}
@@ -541,6 +567,7 @@ export default function ProjectViewerPage() {
                       displayMode={displayMode}
                       isPlaying={isPlaying}
                       orbitRef={orbitRef}
+                      fittedCamRef={fittedCamRef}
                     />
                   ) : (
                     <PlaceholderModel />
@@ -578,6 +605,7 @@ export default function ProjectViewerPage() {
                   action={cameraAction}
                   onActionDone={() => setCameraAction(null)}
                   orbitRef={orbitRef}
+                  fittedCamRef={fittedCamRef}
                 />
 
                 <CameraRotTracker rotRef={axisRotRef} />
