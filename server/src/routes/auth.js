@@ -32,7 +32,7 @@ router.post('/login', loginLimiter, async (req, res) => {
 
     if (!match) return res.status(401).json({ error: 'Invalid credentials' });
 
-    const token = jwt.sign({ id: admin._id, username: admin.username }, process.env.JWT_SECRET || 'dev_secret_change_in_prod', { expiresIn: '24h' });
+    const token = jwt.sign({ id: admin._id, username: admin.username }, process.env.JWT_SECRET || 'dev_secret_change_in_prod', { expiresIn: '30d' });
     res.json({ token, admin: { id: admin._id, username: admin.username, email: admin.email } });
   } catch (err) {
     console.error(err);

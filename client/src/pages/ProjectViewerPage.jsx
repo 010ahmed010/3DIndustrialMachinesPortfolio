@@ -5,9 +5,29 @@ import { OrbitControls, Environment, Grid, useGLTF, Html, Center, useAnimations 
 import * as THREE from 'three';
 import api from '../utils/api.js';
 
-function GLBModel({ url, displayMode, isPlaying }) {
+function GLBModel({ url, displayMode, isPlaying, orbitRef }) {
   const { scene, animations } = useGLTF(url);
   const { actions, names } = useAnimations(animations, scene);
+  const { camera } = useThree();
+
+  useEffect(() => {
+    const box = new THREE.Box3().setFromObject(scene);
+    if (box.isEmpty()) return;
+    const size = box.getSize(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const fov = camera.fov * (Math.PI / 180);
+    const dist = (maxDim / 2) / Math.tan(fov / 2) * 1.8;
+    camera.position.set(dist * 0.6, dist * 0.45, dist);
+    camera.near = maxDim * 0.001;
+    camera.far = maxDim * 200;
+    camera.updateProjectionMatrix();
+    if (orbitRef?.current) {
+      orbitRef.current.target.set(0, 0, 0);
+      orbitRef.current.minDistance = maxDim * 0.05;
+      orbitRef.current.maxDistance = maxDim * 30;
+      orbitRef.current.update();
+    }
+  }, [scene]);
 
   useEffect(() => {
     if (!names.length) return;
@@ -58,10 +78,10 @@ function GLBModel({ url, displayMode, isPlaying }) {
   return <Center><primitive object={scene} /></Center>;
 }
 
-function ModelViewer({ url, format, displayMode, isPlaying }) {
+function ModelViewer({ url, format, displayMode, isPlaying, orbitRef }) {
   if (!url) return null;
   if (format === 'glb' || format === 'gltf')
-    return <GLBModel url={url} displayMode={displayMode} isPlaying={isPlaying} />;
+    return <GLBModel url={url} displayMode={displayMode} isPlaying={isPlaying} orbitRef={orbitRef} />;
   return (
     <Html center>
       <div className="text-center text-slate-400">
@@ -296,7 +316,7 @@ export default function ProjectViewerPage() {
 
   const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
-      viewerRef.current?.requestFullscreen();
+      document.documentElement.requestFullscreen().catch(() => {});
     } else {
       document.exitFullscreen();
     }
@@ -520,6 +540,7 @@ export default function ProjectViewerPage() {
                       format={module.modelFormat}
                       displayMode={displayMode}
                       isPlaying={isPlaying}
+                      orbitRef={orbitRef}
                     />
                   ) : (
                     <PlaceholderModel />

@@ -105,9 +105,10 @@ router.post('/', protect, handleUpload([
       sketches = req.files.sketches.map(f => '/uploads/sketches/' + f.filename);
     }
 
+    const thumbnailUrl = sketches[0] || null;
     const mod = await Module.create({
       titleAr, titleEn, descriptionAr, descriptionEn, category, designer,
-      modelFile, modelFormat, sketches, materials, specifications, features,
+      modelFile, modelFormat, sketches, thumbnailUrl, materials, specifications, features,
       status: status || 'pending', softwareVersion,
       partsCount: partsCount ? parseInt(partsCount) : undefined,
       projectType,
@@ -145,9 +146,10 @@ router.put('/:id', protect, handleUpload([
       sketches = req.files.sketches.map(f => '/uploads/sketches/' + f.filename);
     }
 
+    const thumbnailUrl = sketches[0] || existing.thumbnailUrl || null;
     Object.assign(existing, {
       titleAr, titleEn, descriptionAr, descriptionEn, category, designer,
-      modelFile, modelFormat, sketches, materials, specifications, features,
+      modelFile, modelFormat, sketches, thumbnailUrl, materials, specifications, features,
       status, softwareVersion,
       partsCount: partsCount ? parseInt(partsCount) : existing.partsCount,
       projectType,
