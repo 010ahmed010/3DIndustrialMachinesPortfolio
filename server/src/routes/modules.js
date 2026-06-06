@@ -67,13 +67,20 @@ router.get('/all', protect, async (req, res) => {
   }
 });
 
+const getVisitorIp = (req) =>
+  (req.headers['x-forwarded-for']?.split(',')[0]?.trim()) || req.ip || 'unknown';
+
 router.get('/:id', async (req, res) => {
   try {
     const mod = await Module.findById(req.params.id);
     if (!mod) return res.status(404).json({ error: 'Module not found' });
     mod.views = (mod.views || 0) + 1;
     await mod.save();
-    res.json(mod);
+    const visitorIp = getVisitorIp(req);
+    const userVote = mod.votes?.find(v => v.ip === visitorIp)?.vote || null;
+    const modObj = mod.toObject();
+    delete modObj.votes;
+    res.json({ ...modObj, userVote });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -172,17 +179,31 @@ router.delete('/:id', protect, async (req, res) => {
 
 router.post('/:id/like', async (req, res) => {
   try {
-    const { previousVote } = req.body; // 'liked' | 'disliked' | null
-    let inc = {};
-    if (previousVote === 'liked') {
-      inc = { likes: -1 };           // toggle off
-    } else if (previousVote === 'disliked') {
-      inc = { likes: 1, dislikes: -1 }; // switch from dislike → like
+    const visitorIp = getVisitorIp(req);
+    const mod = await Module.findById(req.params.id);
+    if (!mod) return res.status(404).json({ error: 'Not found' });
+
+    const existingIdx = mod.votes.findIndex(v => v.ip === visitorIp);
+    const existingVote = existingIdx >= 0 ? mod.votes[existingIdx].vote : null;
+    let userVote = null;
+
+    if (existingVote === 'liked') {
+      mod.votes.splice(existingIdx, 1);
+      mod.likes = Math.max(0, mod.likes - 1);
+      userVote = null;
+    } else if (existingVote === 'disliked') {
+      mod.votes[existingIdx].vote = 'liked';
+      mod.likes += 1;
+      mod.dislikes = Math.max(0, mod.dislikes - 1);
+      userVote = 'liked';
     } else {
-      inc = { likes: 1 };            // fresh like
+      mod.votes.push({ ip: visitorIp, vote: 'liked' });
+      mod.likes += 1;
+      userVote = 'liked';
     }
-    const mod = await Module.findByIdAndUpdate(req.params.id, { $inc: inc }, { new: true });
-    res.json({ likes: mod.likes, dislikes: mod.dislikes });
+
+    await mod.save();
+    res.json({ likes: mod.likes, dislikes: mod.dislikes, userVote });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -190,17 +211,31 @@ router.post('/:id/like', async (req, res) => {
 
 router.post('/:id/dislike', async (req, res) => {
   try {
-    const { previousVote } = req.body; // 'liked' | 'disliked' | null
-    let inc = {};
-    if (previousVote === 'disliked') {
-      inc = { dislikes: -1 };           // toggle off
-    } else if (previousVote === 'liked') {
-      inc = { dislikes: 1, likes: -1 }; // switch from like → dislike
+    const visitorIp = getVisitorIp(req);
+    const mod = await Module.findById(req.params.id);
+    if (!mod) return res.status(404).json({ error: 'Not found' });
+
+    const existingIdx = mod.votes.findIndex(v => v.ip === visitorIp);
+    const existingVote = existingIdx >= 0 ? mod.votes[existingIdx].vote : null;
+    let userVote = null;
+
+    if (existingVote === 'disliked') {
+      mod.votes.splice(existingIdx, 1);
+      mod.dislikes = Math.max(0, mod.dislikes - 1);
+      userVote = null;
+    } else if (existingVote === 'liked') {
+      mod.votes[existingIdx].vote = 'disliked';
+      mod.dislikes += 1;
+      mod.likes = Math.max(0, mod.likes - 1);
+      userVote = 'disliked';
     } else {
-      inc = { dislikes: 1 };            // fresh dislike
+      mod.votes.push({ ip: visitorIp, vote: 'disliked' });
+      mod.dislikes += 1;
+      userVote = 'disliked';
     }
-    const mod = await Module.findByIdAndUpdate(req.params.id, { $inc: inc }, { new: true });
-    res.json({ likes: mod.likes, dislikes: mod.dislikes });
+
+    await mod.save();
+    res.json({ likes: mod.likes, dislikes: mod.dislikes, userVote });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -17,6 +17,7 @@ const moduleSchema = new mongoose.Schema({
   status: { type: String, enum: ['pending', 'published', 'unpublished'], default: 'pending' },
   likes: { type: Number, default: 0 },
   dislikes: { type: Number, default: 0 },
+  votes: [{ ip: { type: String }, vote: { type: String, enum: ['liked', 'disliked'] } }],
   views: { type: Number, default: 0 },
   softwareVersion: { type: String },
   partsCount: { type: Number },

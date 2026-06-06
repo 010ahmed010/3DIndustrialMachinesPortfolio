@@ -307,9 +307,8 @@ export default function ProjectViewerPage() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showMobileSettings, setShowMobileSettings] = useState(false);
   const [showMobileInfo, setShowMobileInfo] = useState(false);
-  const storedVote = localStorage.getItem(`vote_${id}`);
-  const [liked, setLiked] = useState(storedVote === 'liked');
-  const [disliked, setDisliked] = useState(storedVote === 'disliked');
+  const [liked, setLiked] = useState(false);
+  const [disliked, setDisliked] = useState(false);
 
   const orbitRef = useRef();
   const viewerRef = useRef();
@@ -318,7 +317,11 @@ export default function ProjectViewerPage() {
 
   useEffect(() => {
     api.get(`/modules/${id}`)
-      .then(r => setModule(r.data))
+      .then(r => {
+        setModule(r.data);
+        setLiked(r.data.userVote === 'liked');
+        setDisliked(r.data.userVote === 'disliked');
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [id]);
@@ -331,31 +334,17 @@ export default function ProjectViewerPage() {
   }, []);
 
   const handleLike = async () => {
-    const previousVote = liked ? 'liked' : disliked ? 'disliked' : null;
-    const r = await api.post(`/modules/${id}/like`, { previousVote });
+    const r = await api.post(`/modules/${id}/like`);
     setModule(m => ({ ...m, likes: r.data.likes, dislikes: r.data.dislikes }));
-    if (liked) {
-      setLiked(false);
-      localStorage.removeItem(`vote_${id}`);
-    } else {
-      setLiked(true);
-      setDisliked(false);
-      localStorage.setItem(`vote_${id}`, 'liked');
-    }
+    setLiked(r.data.userVote === 'liked');
+    setDisliked(r.data.userVote === 'disliked');
   };
 
   const handleDislike = async () => {
-    const previousVote = liked ? 'liked' : disliked ? 'disliked' : null;
-    const r = await api.post(`/modules/${id}/dislike`, { previousVote });
+    const r = await api.post(`/modules/${id}/dislike`);
     setModule(m => ({ ...m, likes: r.data.likes, dislikes: r.data.dislikes }));
-    if (disliked) {
-      setDisliked(false);
-      localStorage.removeItem(`vote_${id}`);
-    } else {
-      setDisliked(true);
-      setLiked(false);
-      localStorage.setItem(`vote_${id}`, 'disliked');
-    }
+    setLiked(r.data.userVote === 'liked');
+    setDisliked(r.data.userVote === 'disliked');
   };
 
   const toggleFullscreen = useCallback(() => {
@@ -675,34 +664,26 @@ export default function ProjectViewerPage() {
                 ))}
               </div>
 
-              {/* Like / Dislike — TikTok vertical stack on mobile/tablet */}
-              <div className="lg:hidden absolute right-3 top-1/2 -translate-y-1/2 flex flex-col items-center gap-5">
-                <div className="flex flex-col items-center gap-1">
-                  <button
-                    onClick={handleLike}
-                    className={`w-12 h-12 rounded-full flex items-center justify-center transition-all shadow-lg backdrop-blur-sm border ${
-                      liked
-                        ? 'bg-blue-600 border-blue-500 text-white shadow-blue-600/40'
-                        : 'bg-black/50 border-white/20 text-white hover:bg-white/15'
-                    }`}
-                  >
-                    <i className="fa-solid fa-thumbs-up text-lg" />
-                  </button>
-                  <span className="text-xs font-bold text-white drop-shadow-md">{module.likes || 0}</span>
-                </div>
-                <div className="flex flex-col items-center gap-1">
-                  <button
-                    onClick={handleDislike}
-                    className={`w-12 h-12 rounded-full flex items-center justify-center transition-all shadow-lg backdrop-blur-sm border ${
-                      disliked
-                        ? 'bg-red-600 border-red-500 text-white shadow-red-600/40'
-                        : 'bg-black/50 border-white/20 text-white hover:bg-white/15'
-                    }`}
-                  >
-                    <i className="fa-solid fa-thumbs-down text-lg" />
-                  </button>
-                  <span className="text-xs font-bold text-white drop-shadow-md">{module.dislikes || 0}</span>
-                </div>
+              {/* Like / Dislike — pill style, vertical on mobile/tablet */}
+              <div className="lg:hidden absolute right-3 top-1/2 -translate-y-1/2 flex flex-col gap-2">
+                <button
+                  onClick={handleLike}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                    liked ? 'bg-blue-600 text-white' : 'bg-black/40 backdrop-blur-sm border border-white/10 text-slate-300 hover:text-white hover:border-blue-500/50'
+                  }`}
+                >
+                  <i className="fa-solid fa-thumbs-up" />
+                  <span>{module.likes || 0}</span>
+                </button>
+                <button
+                  onClick={handleDislike}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                    disliked ? 'bg-red-600 text-white' : 'bg-black/40 backdrop-blur-sm border border-white/10 text-slate-300 hover:text-white hover:border-red-500/50'
+                  }`}
+                >
+                  <i className="fa-solid fa-thumbs-down" />
+                  <span>{module.dislikes || 0}</span>
+                </button>
               </div>
 
               {/* Like / Dislike — horizontal on desktop */}
