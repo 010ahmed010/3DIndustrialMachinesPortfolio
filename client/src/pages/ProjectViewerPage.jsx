@@ -152,6 +152,51 @@ function ModelViewer({ url, format, displayMode, isPlaying, orbitRef, fittedCamR
   );
 }
 
+class ModelErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch() {
+    this.props.onError?.();
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <Html center>
+          <div style={{
+            textAlign: 'center',
+            direction: 'rtl',
+            fontFamily: 'Tajawal, Cairo, sans-serif',
+            padding: '32px 24px',
+            background: 'rgba(13,17,25,0.92)',
+            borderRadius: '16px',
+            border: '1px solid rgba(239,68,68,0.25)',
+            backdropFilter: 'blur(12px)',
+            minWidth: '260px',
+          }}>
+            <div style={{ fontSize: '2.8rem', marginBottom: '14px' }}>
+              <i className="fa-solid fa-file-slash" style={{ color: '#ef4444' }} />
+            </div>
+            <p style={{ fontSize: '15px', fontWeight: '700', color: '#f1f5f9', marginBottom: '8px' }}>
+              ملف النموذج غير متوفر
+            </p>
+            <p style={{ fontSize: '12px', color: '#64748b', lineHeight: '1.6' }}>
+              لم يتم العثور على ملف النموذج ثلاثي الأبعاد
+              <br />
+              يرجى التواصل مع المسؤول
+            </p>
+          </div>
+        </Html>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 function PlaceholderModel() {
   return (
     <group>
@@ -629,21 +674,23 @@ export default function ProjectViewerPage() {
                 <directionalLight position={[-5, 5, -5]} intensity={0.3} />
                 <pointLight position={[0, 5, 0]} intensity={0.8} color="#3b82f6" />
 
-                <Suspense fallback={null}>
-                  {module.modelFile ? (
-                    <ModelViewer
-                      url={module.modelFile}
-                      format={module.modelFormat}
-                      displayMode={displayMode}
-                      isPlaying={isPlaying}
-                      orbitRef={orbitRef}
-                      fittedCamRef={fittedCamRef}
-                      onLoad={handleModelLoad}
-                    />
-                  ) : (
-                    <PlaceholderModel />
-                  )}
-                </Suspense>
+                <ModelErrorBoundary onError={handleModelLoad}>
+                  <Suspense fallback={null}>
+                    {module.modelFile ? (
+                      <ModelViewer
+                        url={module.modelFile}
+                        format={module.modelFormat}
+                        displayMode={displayMode}
+                        isPlaying={isPlaying}
+                        orbitRef={orbitRef}
+                        fittedCamRef={fittedCamRef}
+                        onLoad={handleModelLoad}
+                      />
+                    ) : (
+                      <PlaceholderModel />
+                    )}
+                  </Suspense>
+                </ModelErrorBoundary>
 
                 {showGrid && (
                   <Grid
