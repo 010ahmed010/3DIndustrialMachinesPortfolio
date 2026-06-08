@@ -408,11 +408,11 @@ export default function ProjectViewerPage() {
     setTimeout(() => setModelLoaded(true), 350);
   }, []);
 
-  // ESC key exits CSS-based fullscreen
+  // Sync isFullscreen state with the browser's native fullscreen events
   useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') setIsFullscreen(false); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
+    const onChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
   }, []);
 
   const handleLike = async () => {
@@ -434,7 +434,11 @@ export default function ProjectViewerPage() {
   };
 
   const toggleFullscreen = useCallback(() => {
-    setIsFullscreen(v => !v);
+    if (!document.fullscreenElement) {
+      viewerRef.current?.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
   }, []);
 
   const fireAction = useCallback((action) => {
@@ -646,7 +650,7 @@ export default function ProjectViewerPage() {
 
           {/* 3D Viewer */}
           {activeTab === '3d' && (
-            <div ref={viewerRef} className={isFullscreen ? 'fixed inset-0 z-50 bg-[#0f1117]' : 'flex-1 relative min-h-[55vh] lg:min-h-0'}>
+            <div ref={viewerRef} className="flex-1 relative min-h-[55vh] lg:min-h-0">
               <ViewerLoadingOverlay progress={modelProgress} visible={!modelLoaded && !modelError} />
 
               {modelError && (
