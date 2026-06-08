@@ -164,35 +164,7 @@ class ModelErrorBoundary extends React.Component {
     this.props.onError?.();
   }
   render() {
-    if (this.state.hasError) {
-      return (
-        <Html center>
-          <div style={{
-            textAlign: 'center',
-            direction: 'rtl',
-            fontFamily: 'Tajawal, Cairo, sans-serif',
-            padding: '32px 24px',
-            background: 'rgba(13,17,25,0.92)',
-            borderRadius: '16px',
-            border: '1px solid rgba(239,68,68,0.25)',
-            backdropFilter: 'blur(12px)',
-            minWidth: '260px',
-          }}>
-            <div style={{ fontSize: '2.8rem', marginBottom: '14px' }}>
-              <i className="fa-solid fa-file-slash" style={{ color: '#ef4444' }} />
-            </div>
-            <p style={{ fontSize: '15px', fontWeight: '700', color: '#f1f5f9', marginBottom: '8px' }}>
-              ملف النموذج غير متوفر
-            </p>
-            <p style={{ fontSize: '12px', color: '#64748b', lineHeight: '1.6' }}>
-              لم يتم العثور على ملف النموذج ثلاثي الأبعاد
-              <br />
-              يرجى التواصل مع المسؤول
-            </p>
-          </div>
-        </Html>
-      );
-    }
+    if (this.state.hasError) return null;
     return this.props.children;
   }
 }
@@ -386,6 +358,7 @@ export default function ProjectViewerPage() {
   const [disliked, setDisliked] = useState(false);
   const [modelLoaded, setModelLoaded] = useState(false);
   const [modelProgress, setModelProgress] = useState(0);
+  const [modelError, setModelError] = useState(false);
 
   const orbitRef = useRef();
   const viewerRef = useRef();
@@ -408,6 +381,7 @@ export default function ProjectViewerPage() {
     if (!module) return;
     setModelLoaded(false);
     setModelProgress(0);
+    setModelError(false);
   }, [module?._id]);
 
   // Simulate smooth progress while model is loading (GLB fetch has no byte events)
@@ -662,7 +636,26 @@ export default function ProjectViewerPage() {
           {/* 3D Viewer */}
           {activeTab === '3d' && (
             <div ref={viewerRef} className={isFullscreen ? 'fixed inset-0 z-50 bg-[#0f1117]' : 'flex-1 relative min-h-[55vh] lg:min-h-0'}>
-              <ViewerLoadingOverlay progress={modelProgress} visible={!modelLoaded} />
+              <ViewerLoadingOverlay progress={modelProgress} visible={!modelLoaded && !modelError} />
+
+              {modelError && (
+                <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                  <div className="flex flex-col items-center gap-4 bg-[#0d1119]/85 border border-red-500/20 backdrop-blur-md rounded-2xl px-10 py-8 shadow-2xl" dir="rtl">
+                    <div className="w-14 h-14 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center">
+                      <i className="fa-solid fa-file-slash text-red-400 text-xl" />
+                    </div>
+                    <div className="flex flex-col items-center gap-1.5 text-center">
+                      <span className="text-white text-sm font-semibold">ملف النموذج غير متوفر</span>
+                      <span className="text-slate-500 text-xs leading-relaxed">
+                        لم يتم العثور على ملف النموذج ثلاثي الأبعاد
+                        <br />
+                        يرجى التواصل مع المسؤول
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <Canvas
                 camera={{ position: [3, 2, 5], fov: 45 }}
                 gl={{ antialias: true, preserveDrawingBuffer: true }}
@@ -674,7 +667,7 @@ export default function ProjectViewerPage() {
                 <directionalLight position={[-5, 5, -5]} intensity={0.3} />
                 <pointLight position={[0, 5, 0]} intensity={0.8} color="#3b82f6" />
 
-                <ModelErrorBoundary onError={handleModelLoad}>
+                <ModelErrorBoundary onError={() => { handleModelLoad(); setModelError(true); }}>
                   <Suspense fallback={null}>
                     {module.modelFile ? (
                       <ModelViewer
