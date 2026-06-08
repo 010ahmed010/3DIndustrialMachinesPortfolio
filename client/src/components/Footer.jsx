@@ -2,201 +2,151 @@ import React from "react";
 import { Link } from "react-router-dom";
 import logo from "../assets/logo/3DIndustrialPortfolio.png";
 
-export default function Footer({ profile }) {
-  return (
-    <footer className="bg-[#0a0a0f] border-t border-white/5">
-      {/* Newsletter */}
-      <div className="border-b border-white/5">
-        <div className="container mx-auto px-6 py-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center border border-blue-500/20">
-                <i className="fa-solid fa-envelope text-blue-400 text-lg" />
-              </div>
-              <div>
-                <h3 className="font-bold text-lg">
-                  ابق على اطلاع بأحدث المشاريع
-                </h3>
-                <p className="text-slate-400 text-sm">
-                  اشترك ولا تفوت أي مشروع جديد
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-3 w-full md:w-auto">
-              <input
-                type="email"
-                placeholder="أدخل بريدك الإلكتروني"
-                dir="ltr"
-                className="flex-1 md:w-72 bg-[#151821] border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500 transition-colors"
-              />
-              <button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap">
-                <span>اشتراك</span>
-                <i className="fa-solid fa-paper-plane text-xs" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+const NAV_LINKS = [
+  { label: "الرئيسية", to: "/" },
+  { label: "المشاريع", to: "/#projects" },
+  { label: "عن المهندس", to: "/#about" },
+  { label: "المهارات", to: "/#skills" },
+  { label: "التواصل", to: "/#contact" },
+];
 
-      {/* Main Footer */}
+export default function Footer({ profile }) {
+  const year = new Date().getFullYear();
+  const name = profile?.fullNameAr || "أحمد الجاسم";
+  const profession = profile?.professionAr || "مهندس ميكاترونكس";
+  const bio = profile?.bioAr;
+
+  return (
+    <footer className="bg-[#0a0a0f] border-t border-white/5" dir="rtl">
       <div className="container mx-auto px-6 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-8">
-          {/* Brand */}
-          <div className="md:col-span-2">
-            <Link to="/" className="flex items-center gap-2 mb-4">
-              <img
-                src={logo}
-                alt="logo"
-                className="w-8 h-8 rounded-lg object-contain"
-              />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
+
+          {/* ── Brand ── */}
+          <div className="sm:col-span-2 lg:col-span-1">
+            <Link to="/" className="flex items-center gap-3 mb-4 w-fit">
+              <img src={logo} alt="logo" className="w-9 h-9 rounded-xl object-contain" />
               <span className="font-bold text-lg">ميكا بورتفوليو</span>
             </Link>
-            <p className="text-slate-400 text-sm leading-relaxed mb-6">
-              منصة متخصصة لمهندسي SolidWorks لعرض مشاريعهم بنماذج ثلاثية الأبعاد
-              تفاعلية.
-            </p>
-            <div className="space-y-2">
+
+            <p className="text-blue-400 text-sm font-medium mb-2">{profession}</p>
+
+            {bio ? (
+              <p className="text-slate-400 text-sm leading-relaxed mb-6 line-clamp-4">{bio}</p>
+            ) : (
+              <p className="text-slate-400 text-sm leading-relaxed mb-6">
+                منصة تخصصية لعرض مشاريع الهندسة الميكاترونية بنماذج ثلاثية الأبعاد تفاعلية.
+              </p>
+            )}
+
+            <div className="flex flex-wrap gap-2">
               {[
-                {
-                  icon: "fa-cube",
-                  label: "عرض ثلاثي الأبعاد",
-                  sub: "مشاهدة النماذج تفاعلياً",
-                },
-                {
-                  icon: "fa-folder-open",
-                  label: "إدارة المشاريع",
-                  sub: "تنظيم وإدارة الأعمال",
-                },
-                {
-                  icon: "fa-users",
-                  label: "مجتمع مهندسين",
-                  sub: "تواصل مع المهنيين",
-                },
-              ].map((item, i) => (
-                <div key={i} className="flex items-center gap-3 text-sm">
-                  <i className={`fa-solid ${item.icon} text-blue-400 w-4`} />
-                  <div>
-                    <span className="text-white font-medium">{item.label}</span>
-                    <span className="text-slate-500 mr-2 text-xs">
-                      {item.sub}
-                    </span>
-                  </div>
-                </div>
+                { icon: "fa-cube", label: "عرض ثلاثي الأبعاد" },
+                { icon: "fa-gears", label: "هندسة ميكاترونية" },
+                { icon: "fa-drafting-compass", label: "رسومات فنية" },
+              ].map((tag) => (
+                <span
+                  key={tag.label}
+                  className="flex items-center gap-1.5 text-xs text-slate-400 bg-white/5 border border-white/8 rounded-full px-3 py-1"
+                >
+                  <i className={`fa-solid ${tag.icon} text-blue-400`} />
+                  {tag.label}
+                </span>
               ))}
             </div>
           </div>
 
-          {/* Links */}
-          {[
-            {
-              title: "المنصة",
-              links: [
-                "الرئيسية",
-                "المشاريع",
-                "الفئات",
-                "المهندسون",
-                "المميز",
-                "المشاريع الحديثة",
-              ],
-            },
-            {
-              title: "المصادر",
-              links: [
-                "المدونة",
-                "الدروس",
-                "التوثيق",
-                "مركز المساعدة",
-                "الإرشادات",
-                "مرجع API",
-              ],
-            },
-            {
-              title: "الشركة",
-              links: [
-                "من نحن",
-                "قصتنا",
-                "الوظائف",
-                "سياسة الخصوصية",
-                "الشروط",
-                "تواصل معنا",
-              ],
-            },
-            {
-              title: "الدعم",
-              links: [
-                "مركز المساعدة",
-                "المجتمع",
-                "الإبلاغ عن مشكلة",
-                "التغذية الراجعة",
-                "الدعم الفني",
-              ],
-            },
-          ].map((col, i) => (
-            <div key={i}>
-              <h4 className="font-bold mb-4">{col.title}</h4>
-              <div className="space-y-2">
-                {col.links.map((l) => (
-                  <a
-                    key={l}
-                    href="#"
-                    className="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors"
-                  >
-                    <i className="fa-solid fa-angle-left text-xs text-slate-600" />
-                    {l}
-                  </a>
-                ))}
-              </div>
+          {/* ── Navigation ── */}
+          <div>
+            <h4 className="font-bold text-sm mb-5 text-white">روابط سريعة</h4>
+            <nav className="space-y-3">
+              {NAV_LINKS.map((link) => (
+                <Link
+                  key={link.to}
+                  to={link.to}
+                  className="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors group"
+                >
+                  <i className="fa-solid fa-angle-left text-xs text-slate-600 group-hover:text-blue-400 transition-colors" />
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
+          </div>
+
+          {/* ── Contact ── */}
+          <div>
+            <h4 className="font-bold text-sm mb-5 text-white">التواصل</h4>
+            <div className="space-y-3">
+              {profile?.email && (
+                <a
+                  href={`mailto:${profile.email}`}
+                  className="flex items-center gap-3 text-sm text-slate-400 hover:text-white transition-colors group"
+                >
+                  <span className="w-8 h-8 rounded-lg bg-white/5 border border-white/8 flex items-center justify-center flex-shrink-0 group-hover:border-blue-500/40 transition-colors">
+                    <i className="fa-solid fa-envelope text-blue-400 text-xs" />
+                  </span>
+                  <span className="truncate" dir="ltr">{profile.email}</span>
+                </a>
+              )}
+
+              {profile?.phone && (
+                <a
+                  href={`tel:${profile.phone}`}
+                  className="flex items-center gap-3 text-sm text-slate-400 hover:text-white transition-colors group"
+                >
+                  <span className="w-8 h-8 rounded-lg bg-white/5 border border-white/8 flex items-center justify-center flex-shrink-0 group-hover:border-blue-500/40 transition-colors">
+                    <i className="fa-solid fa-phone text-blue-400 text-xs" />
+                  </span>
+                  <span dir="ltr">{profile.phone}</span>
+                </a>
+              )}
+
+              {profile?.whatsapp && (
+                <a
+                  href={`https://wa.me/${profile.whatsapp}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-3 text-sm text-slate-400 hover:text-white transition-colors group"
+                >
+                  <span className="w-8 h-8 rounded-lg bg-white/5 border border-white/8 flex items-center justify-center flex-shrink-0 group-hover:border-blue-500/40 transition-colors">
+                    <i className="fa-brands fa-whatsapp text-blue-400 text-xs" />
+                  </span>
+                  <span>واتساب</span>
+                </a>
+              )}
+
+              {profile?.linkedin && (
+                <a
+                  href={profile.linkedin}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-3 text-sm text-slate-400 hover:text-white transition-colors group"
+                >
+                  <span className="w-8 h-8 rounded-lg bg-white/5 border border-white/8 flex items-center justify-center flex-shrink-0 group-hover:border-blue-500/40 transition-colors">
+                    <i className="fa-brands fa-linkedin text-blue-400 text-xs" />
+                  </span>
+                  <span>LinkedIn</span>
+                </a>
+              )}
+
+              {!profile?.email && !profile?.phone && !profile?.whatsapp && !profile?.linkedin && (
+                <p className="text-slate-500 text-sm">أضف بيانات التواصل من لوحة الإدارة</p>
+              )}
             </div>
-          ))}
+          </div>
+
         </div>
       </div>
 
-      {/* Bottom */}
+      {/* ── Bottom bar ── */}
       <div className="border-t border-white/5">
-        <div className="container mx-auto px-6 py-5 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="container mx-auto px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-slate-500 text-sm">
-            © 2024 ميك بورتفوليو. جميع الحقوق محفوظة.
+            © {year} {name} · جميع الحقوق محفوظة
           </p>
-          <div className="flex items-center gap-6">
-            <a
-              href="#"
-              className="text-slate-500 hover:text-white text-sm transition-colors"
-            >
-              سياسة الخصوصية
-            </a>
-            <span className="text-slate-700">•</span>
-            <a
-              href="#"
-              className="text-slate-500 hover:text-white text-sm transition-colors"
-            >
-              شروط الخدمة
-            </a>
-            <span className="text-slate-700">•</span>
-            <a
-              href="#"
-              className="text-slate-500 hover:text-white text-sm transition-colors"
-            >
-              سياسة الكوكيز
-            </a>
-          </div>
-          <div className="flex items-center gap-3">
-            {[
-              { icon: "fa-brands fa-linkedin", href: profile?.linkedin || "#" },
-              { icon: "fa-brands fa-twitter", href: "#" },
-              { icon: "fa-brands fa-instagram", href: "#" },
-              { icon: "fa-brands fa-youtube", href: "#" },
-            ].map((s, i) => (
-              <a
-                key={i}
-                href={s.href}
-                target="_blank"
-                rel="noreferrer"
-                className="w-8 h-8 bg-[#151821] rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-[#1c2030] transition-colors"
-              >
-                <i className={`${s.icon} text-sm`} />
-              </a>
-            ))}
-          </div>
+          <p className="text-slate-600 text-xs flex items-center gap-1.5">
+            <i className="fa-solid fa-cube text-blue-500/50" />
+            بُني بشغف للهندسة الميكاترونية
+          </p>
         </div>
       </div>
     </footer>
