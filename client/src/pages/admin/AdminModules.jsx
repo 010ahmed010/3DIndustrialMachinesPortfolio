@@ -81,7 +81,7 @@ function UploadModal({ onClose, onSuccess, editModule }) {
         </div>
 
         <div className="overflow-y-auto flex-1">
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+        <form id="module-form" onSubmit={handleSubmit} className="p-6 space-y-5">
           {/* Titles */}
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -221,18 +221,20 @@ function UploadModal({ onClose, onSuccess, editModule }) {
             </div>
           )}
 
-          <div className="flex gap-3 pt-2">
-            <button type="button" onClick={onClose} disabled={loading} className="flex-1 border border-white/10 text-slate-300 hover:text-white hover:border-white/20 disabled:opacity-40 py-2.5 rounded-xl text-sm font-medium transition-colors">
-              إلغاء
-            </button>
-            <button type="submit" disabled={loading} className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white py-2.5 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2">
-              {loading
-                ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /><span>{phase === 'processing' ? 'جاري المعالجة...' : 'جاري الرفع...'}</span></>
-                : <><i className="fa-solid fa-cloud-upload-alt" /><span>{editModule ? 'حفظ التعديلات' : 'رفع المشروع'}</span></>
-              }
-            </button>
-          </div>
         </form>
+        </div>
+
+        {/* Pinned footer — always visible, never scrolls away */}
+        <div className="flex gap-3 px-6 py-4 border-t border-white/5 bg-[#151821] flex-shrink-0">
+          <button type="button" onClick={onClose} disabled={loading} className="flex-1 border border-white/10 text-slate-300 hover:text-white hover:border-white/20 disabled:opacity-40 py-2.5 rounded-xl text-sm font-medium transition-colors">
+            إلغاء
+          </button>
+          <button type="submit" form="module-form" disabled={loading} className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white py-2.5 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2">
+            {loading
+              ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /><span>{phase === 'processing' ? 'جاري المعالجة...' : 'جاري الرفع...'}</span></>
+              : <><i className="fa-solid fa-cloud-upload-alt" /><span>{editModule ? 'حفظ التعديلات' : 'رفع المشروع'}</span></>
+            }
+          </button>
         </div>
       </div>
     </div>
