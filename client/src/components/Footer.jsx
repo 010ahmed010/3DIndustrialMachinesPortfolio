@@ -3,11 +3,11 @@ import { Link } from "react-router-dom";
 import logo from "../assets/logo/3DIndustrialPortfolio.png";
 
 const NAV_LINKS = [
-  { label: "الرئيسية", to: "/" },
-  { label: "المشاريع", to: "/#projects" },
-  { label: "عن المهندس", to: "/#about" },
-  { label: "المهارات", to: "/#skills" },
-  { label: "التواصل", to: "/#contact" },
+  { label: "الرئيسية", section: "home" },
+  { label: "المشاريع", section: "projects" },
+  { label: "عن المهندس", section: "about" },
+  { label: "المهارات", section: "skills" },
+  { label: "التواصل", section: "contact" },
 ];
 
 export default function Footer({ profile }) {
@@ -15,6 +15,19 @@ export default function Footer({ profile }) {
   const name = profile?.fullNameAr || "أحمد الجاسم";
   const profession = profile?.professionAr || "مهندس ميكاترونكس";
   const bio = profile?.bioAr;
+  const handleNavClick = (e, section) => {
+    e.preventDefault();
+    const scrollTo = () => {
+      const el = document.getElementById(section);
+      if (el) el.scrollIntoView({ behavior: "smooth" });
+      else window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+    if (window.location.pathname === "/") {
+      scrollTo();
+    } else {
+      window.location.href = `/#${section}`;
+    }
+  };
 
   return (
     <footer className="bg-[#0a0a0f] border-t border-white/5" dir="rtl">
@@ -60,14 +73,15 @@ export default function Footer({ profile }) {
             <h4 className="font-bold text-sm mb-5 text-white">روابط سريعة</h4>
             <nav className="space-y-3">
               {NAV_LINKS.map((link) => (
-                <Link
-                  key={link.to}
-                  to={link.to}
-                  className="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors group"
+                <a
+                  key={link.section}
+                  href={`/#${link.section}`}
+                  onClick={(e) => handleNavClick(e, link.section)}
+                  className="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors group cursor-pointer"
                 >
                   <i className="fa-solid fa-angle-left text-xs text-slate-600 group-hover:text-blue-400 transition-colors" />
                   {link.label}
-                </Link>
+                </a>
               ))}
             </nav>
           </div>
