@@ -70,8 +70,11 @@ router.get('/all', protect, async (req, res) => {
   }
 });
 
-const getVisitorIp = (req) =>
-  (req.headers['x-forwarded-for']?.split(',')[0]?.trim()) || req.ip || 'unknown';
+const getVisitorId = (req) =>
+  req.headers['x-visitor-id'] ||
+  (req.headers['x-forwarded-for']?.split(',')[0]?.trim()) ||
+  req.ip ||
+  'unknown';
 
 router.get('/:id', async (req, res) => {
   try {
@@ -79,8 +82,8 @@ router.get('/:id', async (req, res) => {
     if (!mod) return res.status(404).json({ error: 'Module not found' });
     mod.views = (mod.views || 0) + 1;
     await mod.save();
-    const visitorIp = getVisitorIp(req);
-    const userVote = mod.votes?.find(v => v.ip === visitorIp)?.vote || null;
+    const visitorId = getVisitorId(req);
+    const userVote = mod.votes?.find(v => v.ip === visitorId)?.vote || null;
     const modObj = mod.toObject();
     delete modObj.votes;
     res.json({ ...modObj, userVote });
@@ -197,11 +200,11 @@ router.delete('/:id', protect, async (req, res) => {
 
 router.post('/:id/like', async (req, res) => {
   try {
-    const visitorIp = getVisitorIp(req);
+    const visitorId = getVisitorId(req);
     const mod = await Module.findById(req.params.id);
     if (!mod) return res.status(404).json({ error: 'Not found' });
 
-    const existingIdx = mod.votes.findIndex(v => v.ip === visitorIp);
+    const existingIdx = mod.votes.findIndex(v => v.ip === visitorId);
     const existingVote = existingIdx >= 0 ? mod.votes[existingIdx].vote : null;
     let userVote = null;
 
@@ -215,7 +218,7 @@ router.post('/:id/like', async (req, res) => {
       mod.dislikes = Math.max(0, mod.dislikes - 1);
       userVote = 'liked';
     } else {
-      mod.votes.push({ ip: visitorIp, vote: 'liked' });
+      mod.votes.push({ ip: visitorId, vote: 'liked' });
       mod.likes += 1;
       userVote = 'liked';
     }
@@ -229,11 +232,11 @@ router.post('/:id/like', async (req, res) => {
 
 router.post('/:id/dislike', async (req, res) => {
   try {
-    const visitorIp = getVisitorIp(req);
+    const visitorId = getVisitorId(req);
     const mod = await Module.findById(req.params.id);
     if (!mod) return res.status(404).json({ error: 'Not found' });
 
-    const existingIdx = mod.votes.findIndex(v => v.ip === visitorIp);
+    const existingIdx = mod.votes.findIndex(v => v.ip === visitorId);
     const existingVote = existingIdx >= 0 ? mod.votes[existingIdx].vote : null;
     let userVote = null;
 
@@ -247,7 +250,7 @@ router.post('/:id/dislike', async (req, res) => {
       mod.likes = Math.max(0, mod.likes - 1);
       userVote = 'disliked';
     } else {
-      mod.votes.push({ ip: visitorIp, vote: 'disliked' });
+      mod.votes.push({ ip: visitorId, vote: 'disliked' });
       mod.dislikes += 1;
       userVote = 'disliked';
     }

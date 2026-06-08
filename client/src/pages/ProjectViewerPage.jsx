@@ -369,8 +369,15 @@ export default function ProjectViewerPage() {
     api.get(`/modules/${id}`)
       .then(r => {
         setModule(r.data);
-        setLiked(r.data.userVote === 'liked');
-        setDisliked(r.data.userVote === 'disliked');
+        const stored = localStorage.getItem(`vote_${id}`);
+        if (stored) {
+          setLiked(stored === 'liked');
+          setDisliked(stored === 'disliked');
+        } else {
+          setLiked(r.data.userVote === 'liked');
+          setDisliked(r.data.userVote === 'disliked');
+          if (r.data.userVote) localStorage.setItem(`vote_${id}`, r.data.userVote);
+        }
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -413,6 +420,8 @@ export default function ProjectViewerPage() {
     setModule(m => ({ ...m, likes: r.data.likes, dislikes: r.data.dislikes }));
     setLiked(r.data.userVote === 'liked');
     setDisliked(r.data.userVote === 'disliked');
+    if (r.data.userVote) localStorage.setItem(`vote_${id}`, r.data.userVote);
+    else localStorage.removeItem(`vote_${id}`);
   };
 
   const handleDislike = async () => {
@@ -420,6 +429,8 @@ export default function ProjectViewerPage() {
     setModule(m => ({ ...m, likes: r.data.likes, dislikes: r.data.dislikes }));
     setLiked(r.data.userVote === 'liked');
     setDisliked(r.data.userVote === 'disliked');
+    if (r.data.userVote) localStorage.setItem(`vote_${id}`, r.data.userVote);
+    else localStorage.removeItem(`vote_${id}`);
   };
 
   const toggleFullscreen = useCallback(() => {
