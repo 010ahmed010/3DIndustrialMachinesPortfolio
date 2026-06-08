@@ -72,14 +72,15 @@ function UploadModal({ onClose, onSuccess, editModule }) {
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" dir="rtl">
-      <div className="bg-[#151821] rounded-2xl border border-white/10 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 sticky top-0 bg-[#151821]">
+      <div className="bg-[#151821] rounded-2xl border border-white/10 w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 bg-[#151821] flex-shrink-0">
           <h2 className="font-bold text-lg">{editModule ? 'تعديل المشروع' : 'رفع مشروع جديد'}</h2>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-white transition-colors rounded-lg hover:bg-white/5">
             <i className="fa-solid fa-xmark" />
           </button>
         </div>
 
+        <div className="overflow-y-auto flex-1">
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
           {/* Titles */}
           <div className="grid grid-cols-2 gap-4">
@@ -232,6 +233,7 @@ function UploadModal({ onClose, onSuccess, editModule }) {
             </button>
           </div>
         </form>
+        </div>
       </div>
     </div>
   );
