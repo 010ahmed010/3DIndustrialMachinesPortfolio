@@ -24,7 +24,7 @@ export default function AdminLayout() {
   };
 
   const navLinks = [
-    { to: '/admin/dashboard', icon: 'fa-grid-2', label: 'لوحة التحكم' },
+    { to: '/admin/dashboard', icon: 'fa-gauge', label: 'لوحة التحكم' },
     { to: '/admin/modules',   icon: 'fa-cube',   label: 'المشاريع ثلاثية الأبعاد' },
     { to: '/admin/settings',  icon: 'fa-gear',   label: 'الإعدادات' },
   ];
